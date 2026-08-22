@@ -12,3 +12,6 @@
 *.swp
 .idea/
 .vscode/
+
+# SDD scratch workspace
+/.superpowers/
