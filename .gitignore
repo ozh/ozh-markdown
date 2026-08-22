@@ -1,0 +1,14 @@
+# Dev-only tooling, never shipped. Runtime vendor/ IS committed on purpose.
+/tests/tools/vendor/
+/tests/tools/composer.lock
+/node_modules/
+
+# Test artifacts
+/tests/.phpunit.result.cache
+/tests/coverage/
+
+# Editors and OS
+.DS_Store
+*.swp
+.idea/
+.vscode/
