@@ -4,7 +4,7 @@
 /node_modules/
 
 # Test artifacts
-/tests/.phpunit.result.cache
+/tests/.phpunit.cache/
 /tests/coverage/
 
 # Editors and OS
