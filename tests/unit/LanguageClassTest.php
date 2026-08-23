@@ -172,4 +172,41 @@ final class LanguageClassTest extends TestCase {
 			ozhmd_filter_language_classes('<code id="a" class="language-php">x</code>')
 		);
 	}
+
+	/**
+	 * A quoted angle bracket does not end the tag early.
+	 *
+	 * @return void
+	 */
+	public function test_a_quoted_angle_bracket_does_not_end_the_tag_early(): void {
+		// A naive [^>]* tag matcher stops at the > inside class="a>", leaving
+		// the rest of the tag unexamined and the hostile class in place.
+		$result = ozhmd_filter_language_classes('<code class="a>" onmouseover="alert(1)">x</code>');
+
+		$this->assertStringNotContainsString('class=', $result);
+	}
+
+	/**
+	 * A language class survives an earlier quoted angle bracket.
+	 *
+	 * @return void
+	 */
+	public function test_a_language_class_survives_an_earlier_quoted_angle_bracket(): void {
+		$result = ozhmd_filter_language_classes('<code title="a>b" class="language-php">x</code>');
+
+		$this->assertStringContainsString('class="language-php"', $result);
+	}
+
+	/**
+	 * Does not match a class-suffixed attribute name.
+	 *
+	 * @return void
+	 */
+	public function test_does_not_match_a_class_suffixed_attribute_name(): void {
+		// \bclass also matches inside data-class, which corrupts the tag.
+		$this->assertSame(
+			'<pre data-class="hack" class="language-php">y</pre>',
+			ozhmd_filter_language_classes('<pre data-class="hack" class="language-php">y</pre>')
+		);
+	}
 }

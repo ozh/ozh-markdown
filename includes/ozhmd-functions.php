@@ -98,15 +98,22 @@ function ozhmd_is_valid_language_class(string $class): bool {
  * fence info strings. It runs anyway, because KSES can allow an attribute but
  * cannot pattern-match its value.
  *
+ * The tag matcher is quote aware. A naive [^>]* stops at the first > in the
+ * string, including one inside a quoted attribute value, which would leave the
+ * rest of the tag unexamined.
+ *
+ * If the regex engine fails, the original HTML is returned unfiltered. That is
+ * deliberate: this pass is the middle of three layers, and KSES runs after it.
+ *
  * @param string $html HTML to filter.
  * @return string HTML with only language-* classes left on pre and code tags.
  */
 function ozhmd_filter_language_classes(string $html): string {
 	$filtered = preg_replace_callback(
-		'#<(pre|code)\b([^>]*)>#i',
+		'#<(pre|code)\b((?:"[^"]*"|\'[^\']*\'|[^>"\'])*)>#i',
 		static function (array $tag_match): string {
 			$attributes = preg_replace_callback(
-				'/\bclass\s*=\s*(["\'])(.*?)\1/is',
+				'/(?<![\w-])class\s*=\s*(["\'])(.*?)\1/is',
 				static function (array $class_match): string {
 					$tokens = preg_split('/\s+/', trim($class_match[2]), -1, PREG_SPLIT_NO_EMPTY);
 					$kept   = array_filter($tokens ?: [], 'ozhmd_is_valid_language_class');
