@@ -1,3 +1,10 @@
+/**
+ * Test suite for pure upload helpers.
+ *
+ * Covers buildPlaceholder(), buildMarkdownImage(), replacePlaceholder(), and
+ * isImageFile(). Includes security-relevant cases: regex metacharacters in the
+ * needle, a literal $& in the replacement, and the backslash-bracket payload.
+ */
 const test = require('node:test');
 const assert = require('node:assert');
 const lib = require('../../assets/js/lib/ozhmd-upload-lib.js');
