@@ -31,6 +31,23 @@ Every task's requirements implicitly include this section.
 - **Typed signatures everywhere:** parameter types, return types, nullable types (`?int`) wherever the code allows. `void` where nothing is returned.
 - **Opening brace on the same line**, for functions, classes and control structures.
 - **DocBlocks before every class, method and function**, with `@param` and `@return`. Code comments in English.
+- **This includes test classes and test methods.** The test code blocks in this plan omit them for brevity; add them when transcribing. A test method DocBlock states the behaviour under test in one line, followed by `@return void`. Do not restate the method name:
+
+  ```php
+  /**
+   * Post type eligibility helpers.
+   */
+  final class PostTypesTest extends TestCase {
+
+  	/**
+  	 * The built-in exclusion list covers every post type named in the spec.
+  	 *
+  	 * @return void
+  	 */
+  	public function test_default_exclusions_cover_every_post_type_named_in_the_spec(): void {
+  ```
+
+  Where a test already carries an inline comment explaining a subtlety, keep the comment where it is and let the DocBlock state the behaviour.
 - **No inline section-header comments** like `// Helpers` above groups of functions. DocBlocks serve that purpose.
 - **No `declare(strict_types=1)` in plugin files.** WordPress passes loosely typed values into hook callbacks (post IDs as numeric strings, for one), and coercive mode absorbs that. Test files may use it, since they control their own inputs.
 - **Formatting:** tabs for indentation in PHP and JS. No spaces immediately inside parentheses. Files end with a trailing blank line.
