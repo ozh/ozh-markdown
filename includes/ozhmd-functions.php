@@ -161,12 +161,17 @@ function ozhmd_alt_from_filename(string $filename): string {
  * Escapes the characters that would otherwise terminate the alt text or the
  * URL, so a hostile file name cannot break out of the tag.
  *
+ * The backslash is escaped first, and the order matters. Escaping only the
+ * brackets turns an existing "\]" into "\\]", which CommonMark reads as an
+ * escaped backslash followed by a live bracket, closing the alt text early and
+ * letting the file name supply its own image URL.
+ *
  * @param string $alt Alt text.
  * @param string $url Image URL.
  * @return string Markdown image tag.
  */
 function ozhmd_build_markdown_image(string $alt, string $url): string {
-	$safe_alt = str_replace(['[', ']'], ['\[', '\]'], $alt);
+	$safe_alt = str_replace(['\\', '[', ']'], ['\\\\', '\[', '\]'], $alt);
 	$safe_url = str_replace(['(', ')', ' '], ['%28', '%29', '%20'], $url);
 
 	return '![' . $safe_alt . '](' . $safe_url . ')';

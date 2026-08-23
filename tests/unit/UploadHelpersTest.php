@@ -82,6 +82,38 @@ final class UploadHelpersTest extends TestCase {
 	}
 
 	/**
+	 * Alt text escapes backslashes.
+	 *
+	 * @return void
+	 */
+	public function test_escapes_a_backslash_in_the_alt_text(): void {
+		$this->assertSame(
+			'![a\\\\b](https://example.com/x.png)',
+			ozhmd_build_markdown_image('a\\b', 'https://example.com/x.png')
+		);
+	}
+
+	/**
+	 * Backslash-bracket payload cannot close alt text early.
+	 *
+	 * @return void
+	 */
+	public function test_a_backslash_bracket_payload_cannot_close_the_alt_text_early(): void {
+		// Escaping only the brackets turns the existing "\]" into "\\]", which
+		// CommonMark reads as an escaped backslash followed by a live bracket.
+		// The alt text then ends early and the payload supplies its own URL.
+		$alt = <<<'ALT'
+			x\](https://evil.example/p)[y
+			ALT;
+
+		$expected = <<<'MARKDOWN'
+			![x\\\](https://evil.example/p)\[y](https://example.com/cat.png)
+			MARKDOWN;
+
+		$this->assertSame($expected, ozhmd_build_markdown_image($alt, 'https://example.com/cat.png'));
+	}
+
+	/**
 	 * Upload placeholder has correct format and filename.
 	 *
 	 * @return void
