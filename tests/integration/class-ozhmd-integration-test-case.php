@@ -26,17 +26,28 @@ abstract class Ozhmd_Integration_Test_Case extends TestCase {
 	 * Open a database transaction and snapshot the mutable WordPress
 	 * registries.
 	 *
+	 * The criterion for what belongs here is "registries WordPress mutates
+	 * that tests touch": hooks (`$wp_filter`), post types
+	 * (`$wp_post_types`), taxonomies (`$wp_taxonomies`), the post type
+	 * feature index that `get_post_types_by_support()` reads
+	 * (`$_wp_post_type_features`, a separate global from `$wp_post_types`
+	 * and easy to miss), and registered meta boxes (`$wp_meta_boxes`).
+	 * Extend this list, and the restore below, when a later test touches
+	 * another registry.
+	 *
 	 * @return void
 	 */
 	protected function setUp(): void {
 		parent::setUp();
 
-		global $wpdb, $wp_filter, $wp_post_types, $wp_taxonomies;
+		global $wpdb, $wp_filter, $wp_post_types, $wp_taxonomies, $_wp_post_type_features, $wp_meta_boxes;
 
 		$this->ozhmd_snapshot = [
-			'filter'     => array_map(static fn ($hook) => clone $hook, $wp_filter),
-			'post_types' => $wp_post_types,
-			'taxonomies' => $wp_taxonomies,
+			'filter'             => array_map(static fn ($hook) => clone $hook, $wp_filter),
+			'post_types'         => $wp_post_types,
+			'taxonomies'         => $wp_taxonomies,
+			'post_type_features' => $_wp_post_type_features,
+			'meta_boxes'         => $wp_meta_boxes,
 		];
 
 		$wpdb->query('SET autocommit = 0');
@@ -50,14 +61,16 @@ abstract class Ozhmd_Integration_Test_Case extends TestCase {
 	 * @return void
 	 */
 	protected function tearDown(): void {
-		global $wpdb, $wp_filter, $wp_post_types, $wp_taxonomies;
+		global $wpdb, $wp_filter, $wp_post_types, $wp_taxonomies, $_wp_post_type_features, $wp_meta_boxes;
 
 		$wpdb->query('ROLLBACK');
 		$wpdb->query('SET autocommit = 1');
 
-		$wp_filter     = $this->ozhmd_snapshot['filter'];
-		$wp_post_types = $this->ozhmd_snapshot['post_types'];
-		$wp_taxonomies = $this->ozhmd_snapshot['taxonomies'];
+		$wp_filter              = $this->ozhmd_snapshot['filter'];
+		$wp_post_types          = $this->ozhmd_snapshot['post_types'];
+		$wp_taxonomies          = $this->ozhmd_snapshot['taxonomies'];
+		$_wp_post_type_features = $this->ozhmd_snapshot['post_type_features'];
+		$wp_meta_boxes          = $this->ozhmd_snapshot['meta_boxes'];
 
 		wp_cache_flush();
 

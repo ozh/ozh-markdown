@@ -78,7 +78,7 @@ final class BootstrapTest extends Ozhmd_Integration_Test_Case {
 	}
 
 	/**
-	 * ISOLATION PROOF (1 of 3, setup half): create a post that must not
+	 * ISOLATION PROOF (1 of 5, setup half): create a post that must not
 	 * survive teardown, relying on declaration order to run before its
 	 * companion assertion below.
 	 *
@@ -96,7 +96,7 @@ final class BootstrapTest extends Ozhmd_Integration_Test_Case {
 	}
 
 	/**
-	 * ISOLATION PROOF (1 of 3, assertion half): the post created by the
+	 * ISOLATION PROOF (1 of 5, assertion half): the post created by the
 	 * previous test must be gone, proving the transaction rollback works.
 	 *
 	 * @return void
@@ -113,7 +113,7 @@ final class BootstrapTest extends Ozhmd_Integration_Test_Case {
 	}
 
 	/**
-	 * ISOLATION PROOF (2 of 3, setup half): add a filter that must not
+	 * ISOLATION PROOF (2 of 5, setup half): add a filter that must not
 	 * survive teardown.
 	 *
 	 * @return void
@@ -125,7 +125,7 @@ final class BootstrapTest extends Ozhmd_Integration_Test_Case {
 	}
 
 	/**
-	 * ISOLATION PROOF (2 of 3, assertion half): the filter added by the
+	 * ISOLATION PROOF (2 of 5, assertion half): the filter added by the
 	 * previous test must be gone, proving the $wp_filter restore works.
 	 *
 	 * @return void
@@ -135,7 +135,7 @@ final class BootstrapTest extends Ozhmd_Integration_Test_Case {
 	}
 
 	/**
-	 * ISOLATION PROOF (3 of 3, setup half): register a post type that must
+	 * ISOLATION PROOF (3 of 5, setup half): register a post type that must
 	 * not survive teardown.
 	 *
 	 * @return void
@@ -147,13 +147,70 @@ final class BootstrapTest extends Ozhmd_Integration_Test_Case {
 	}
 
 	/**
-	 * ISOLATION PROOF (3 of 3, assertion half): the post type registered by
-	 * the previous test must be gone, proving the $wp_post_types restore
-	 * works.
+	 * ISOLATION PROOF (3 of 5, assertion half): the post type registered by
+	 * the previous test must be gone from $wp_post_types, proving the
+	 * $wp_post_types restore works.
 	 *
 	 * @return void
 	 */
 	public function test_isolation_the_post_type_does_not_leak_into_the_next_test(): void {
 		$this->assertFalse(post_type_exists('ozhmd_isolation_cpt'));
+	}
+
+	/**
+	 * ISOLATION PROOF (4 of 5, setup half): register a post type that
+	 * supports the editor feature, read through the separate feature index
+	 * rather than $wp_post_types.
+	 *
+	 * @return void
+	 */
+	public function test_isolation_a_post_type_feature_is_registered(): void {
+		register_post_type('ozhmd_feature_cpt', ['supports' => ['title', 'editor']]);
+
+		$this->assertContains('ozhmd_feature_cpt', get_post_types_by_support('editor'));
+	}
+
+	/**
+	 * ISOLATION PROOF (4 of 5, assertion half): the post type registered by
+	 * the previous test must be gone from $_wp_post_type_features, proving
+	 * that separate registry is restored too, not just $wp_post_types.
+	 *
+	 * @return void
+	 */
+	public function test_isolation_the_post_type_feature_does_not_leak_into_the_next_test(): void {
+		$this->assertNotContains('ozhmd_feature_cpt', get_post_types_by_support('editor'));
+	}
+
+	/**
+	 * ISOLATION PROOF (5 of 5, setup half): register a meta box that must
+	 * not survive teardown. The admin-only functions this needs are not
+	 * loaded by a front-end WordPress boot, so this test loads them itself.
+	 *
+	 * @return void
+	 */
+	public function test_isolation_a_meta_box_is_registered(): void {
+		require_once ABSPATH . 'wp-admin/includes/template.php';
+		require_once ABSPATH . 'wp-admin/includes/screen.php';
+		require_once ABSPATH . 'wp-admin/includes/class-wp-screen.php';
+
+		set_current_screen('post');
+		add_meta_box('ozhmd_isolation_meta_box', 'Isolation Proof', '__return_false', 'post', 'normal', 'default');
+
+		global $wp_meta_boxes;
+
+		$this->assertArrayHasKey('ozhmd_isolation_meta_box', $wp_meta_boxes['post']['normal']['default']);
+	}
+
+	/**
+	 * ISOLATION PROOF (5 of 5, assertion half): the meta box registered by
+	 * the previous test must be gone, proving the $wp_meta_boxes restore
+	 * works.
+	 *
+	 * @return void
+	 */
+	public function test_isolation_the_meta_box_does_not_leak_into_the_next_test(): void {
+		global $wp_meta_boxes;
+
+		$this->assertArrayNotHasKey('ozhmd_isolation_meta_box', $wp_meta_boxes['post']['normal']['default'] ?? []);
 	}
 }
