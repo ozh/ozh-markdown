@@ -1093,6 +1093,23 @@ test('buildMarkdownImage encodes parentheses and spaces in the url', () => {
 	);
 });
 
+test('buildMarkdownImage escapes backslashes in the alt text', () => {
+	assert.strictEqual(
+		lib.buildMarkdownImage('a\\b', 'https://example.com/x.png'),
+		'![a\\\\b](https://example.com/x.png)'
+	);
+});
+
+test('buildMarkdownImage neutralises a backslash bracket payload', () => {
+	// Escaping only the brackets would turn the existing "\]" into "\\]",
+	// which CommonMark reads as an escaped backslash plus a live bracket,
+	// letting the file name supply its own image URL.
+	assert.strictEqual(
+		lib.buildMarkdownImage('x\\](https://evil.example/p)[y', 'https://example.com/cat.png'),
+		'![x\\\\\\](https://evil.example/p)\\[y](https://example.com/cat.png)'
+	);
+});
+
 test('replacePlaceholder replaces the first occurrence', () => {
 	assert.strictEqual(lib.replacePlaceholder('a X b X c', 'X', 'Y'), 'a Y b X c');
 });
@@ -1181,12 +1198,23 @@ Expected: FAIL with `Cannot find module '../../assets/js/lib/ozhmd-upload-lib.js
 	 * Escapes the characters that would otherwise terminate the alt text or
 	 * the URL, so a hostile file name cannot break out of the tag.
 	 *
+	 * The backslash is escaped first, and the order matters. Escaping only
+	 * the brackets turns an existing "\]" into "\\]", which CommonMark reads
+	 * as an escaped backslash followed by a live bracket, closing the alt
+	 * text early and letting the file name supply its own image URL. This
+	 * matters more here than in the PHP twin, because the file name reaches
+	 * this function straight from the browser, before WordPress has had any
+	 * chance to sanitize it.
+	 *
 	 * @param {string} alt Alt text.
 	 * @param {string} url Image URL.
 	 * @return {string} Markdown image tag.
 	 */
 	function buildMarkdownImage(alt, url) {
-		var safeAlt = String(alt).replace(/\[/g, '\\[').replace(/\]/g, '\\]');
+		var safeAlt = String(alt)
+			.replace(/\\/g, '\\\\')
+			.replace(/\[/g, '\\[')
+			.replace(/\]/g, '\\]');
 		var safeUrl = String(url)
 			.replace(/\(/g, '%28')
 			.replace(/\)/g, '%29')
@@ -1239,7 +1267,7 @@ Expected: FAIL with `Cannot find module '../../assets/js/lib/ozhmd-upload-lib.js
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run (on the host): `node --test tests/js/`
-Expected: PASS, 11 tests, 0 failures.
+Expected: PASS, 13 tests, 0 failures.
 
 - [ ] **Step 5: Stage the work**
 
@@ -2448,7 +2476,7 @@ Run:
 node --test tests/js/
 ```
 
-Expected: 76 unit tests pass, 24 integration tests pass, 11 JS tests pass.
+Expected: 76 unit tests pass, 24 integration tests pass, 13 JS tests pass.
 
 - [ ] **Step 7: Verify the plugin activates in the real blog**
 
