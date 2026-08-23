@@ -778,6 +778,28 @@ final class UploadHelpersTest extends TestCase {
 		);
 	}
 
+	public function test_escapes_a_backslash_in_the_alt_text(): void {
+		$this->assertSame(
+			'![a\\\\b](https://example.com/x.png)',
+			ozhmd_build_markdown_image('a\\b', 'https://example.com/x.png')
+		);
+	}
+
+	public function test_a_backslash_bracket_payload_cannot_close_the_alt_text_early(): void {
+		// Escaping only the brackets turns the existing "\]" into "\\]", which
+		// CommonMark reads as an escaped backslash followed by a live bracket.
+		// The alt text then ends early and the payload supplies its own URL.
+		$alt = <<<'ALT'
+			x\](https://evil.example/p)[y
+			ALT;
+
+		$expected = <<<'MARKDOWN'
+			![x\\\](https://evil.example/p)\[y](https://example.com/cat.png)
+			MARKDOWN;
+
+		$this->assertSame($expected, ozhmd_build_markdown_image($alt, 'https://example.com/cat.png'));
+	}
+
 	public function test_builds_the_upload_placeholder(): void {
 		$this->assertSame('![Uploading cat.png...]()', ozhmd_upload_placeholder('cat.png'));
 	}
@@ -922,12 +944,17 @@ function ozhmd_alt_from_filename(string $filename): string {
  * Escapes the characters that would otherwise terminate the alt text or the
  * URL, so a hostile file name cannot break out of the tag.
  *
+ * The backslash is escaped first, and the order matters. Escaping only the
+ * brackets turns an existing "\]" into "\\]", which CommonMark reads as an
+ * escaped backslash followed by a live bracket, closing the alt text early and
+ * letting the file name supply its own image URL.
+ *
  * @param string $alt Alt text.
  * @param string $url Image URL.
  * @return string Markdown image tag.
  */
 function ozhmd_build_markdown_image(string $alt, string $url): string {
-	$safe_alt = str_replace(['[', ']'], ['\[', '\]'], $alt);
+	$safe_alt = str_replace(['\\', '[', ']'], ['\\\\', '\[', '\]'], $alt);
 	$safe_url = str_replace(['(', ')', ' '], ['%28', '%29', '%20'], $url);
 
 	return '![' . $safe_alt . '](' . $safe_url . ')';
@@ -1003,7 +1030,7 @@ function ozhmd_sanitize_options(array $input, array $defaults): array {
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `./tools/dev.sh tests/tools/vendor/bin/phpunit -c phpunit-unit.xml.dist`
-Expected: PASS, 61 tests total (36 from earlier tasks, 3 in PostStateTest, 15 in UploadHelpersTest, 7 in OptionsTest), 0 failures.
+Expected: PASS, 63 tests total (36 from earlier tasks, 3 in PostStateTest, 17 in UploadHelpersTest, 7 in OptionsTest), 0 failures.
 
 - [ ] **Step 5: Stage the work**
 
@@ -1565,7 +1592,7 @@ class Ozhmd_Converter {
 - [ ] **Step 6: Run the test to verify it passes**
 
 Run: `./tools/dev.sh tests/tools/vendor/bin/phpunit -c phpunit-unit.xml.dist`
-Expected: PASS, 74 tests total (61 from earlier tasks, 13 in ConverterTest), 0 failures.
+Expected: PASS, 76 tests total (63 from earlier tasks, 13 in ConverterTest), 0 failures.
 
 - [ ] **Step 7: Stage the work**
 
@@ -1677,7 +1704,7 @@ Expected: `No syntax errors detected in ozh-markdown.php`
 - [ ] **Step 3: Verify the unit suite still passes**
 
 Run: `./tools/dev.sh tests/tools/vendor/bin/phpunit -c phpunit-unit.xml.dist`
-Expected: PASS, 74 tests, 0 failures.
+Expected: PASS, 76 tests, 0 failures.
 
 - [ ] **Step 4: Stage the work**
 
@@ -1879,7 +1906,7 @@ Expected: PASS, 6 tests, 0 failures, preceded by the WordPress test suite's inst
 - [ ] **Step 7: Confirm the unit suite is unaffected**
 
 Run: `./tools/dev.sh tests/tools/vendor/bin/phpunit -c phpunit-unit.xml.dist`
-Expected: PASS, 74 tests, 0 failures.
+Expected: PASS, 76 tests, 0 failures.
 
 - [ ] **Step 8: Stage the work**
 
@@ -2421,7 +2448,7 @@ Run:
 node --test tests/js/
 ```
 
-Expected: 74 unit tests pass, 24 integration tests pass, 11 JS tests pass.
+Expected: 76 unit tests pass, 24 integration tests pass, 11 JS tests pass.
 
 - [ ] **Step 7: Verify the plugin activates in the real blog**
 
