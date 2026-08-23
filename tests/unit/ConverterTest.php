@@ -140,6 +140,52 @@ final class ConverterTest extends TestCase {
 	}
 
 	/**
+	 * The untrusted converter caps nesting depth at max_nesting_level.
+	 *
+	 * @return void
+	 */
+	public function test_untrusted_converter_caps_nesting_depth(): void {
+		// max_nesting_level bounds pathological input. Without it, deeply
+		// nested markup is a cheap way to burn server time on a comment form.
+		$html = (string) $this->factory->create_untrusted()->convert(str_repeat('> ', 25) . 'boom');
+
+		$this->assertSame(20, substr_count($html, '<blockquote>'));
+	}
+
+	/**
+	 * The trusted converter does not cap nesting depth.
+	 *
+	 * @return void
+	 */
+	public function test_trusted_converter_does_not_cap_nesting_depth(): void {
+		$html = (string) $this->factory->create_trusted()->convert(str_repeat('> ', 25) . 'boom');
+
+		$this->assertSame(25, substr_count($html, '<blockquote>'));
+	}
+
+	/**
+	 * The untrusted converter strips HTML comments.
+	 *
+	 * @return void
+	 */
+	public function test_untrusted_converter_strips_html_comments(): void {
+		$html = (string) $this->factory->create_untrusted()->convert('<!-- secret --> hi');
+
+		$this->assertStringNotContainsString('secret', $html);
+	}
+
+	/**
+	 * The untrusted converter neutralises data URI images.
+	 *
+	 * @return void
+	 */
+	public function test_untrusted_converter_neutralises_data_uri_images(): void {
+		$html = (string) $this->factory->create_untrusted()->convert('![x](data:text/html;base64,PHNjcmlwdD4=)');
+
+		$this->assertStringNotContainsString('data:text/html', $html);
+	}
+
+	/**
 	 * The factory returns a new converter instance on every call.
 	 *
 	 * @return void
