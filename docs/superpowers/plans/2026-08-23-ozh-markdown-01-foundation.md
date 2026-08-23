@@ -566,6 +566,28 @@ final class LanguageClassTest extends TestCase {
 			ozhmd_filter_language_classes('<code id="a" class="language-php">x</code>')
 		);
 	}
+
+	public function test_a_quoted_angle_bracket_does_not_end_the_tag_early(): void {
+		// A naive [^>]* tag matcher stops at the > inside class="a>", leaving
+		// the rest of the tag unexamined and the hostile class in place.
+		$result = ozhmd_filter_language_classes('<code class="a>" onmouseover="alert(1)">x</code>');
+
+		$this->assertStringNotContainsString('class=', $result);
+	}
+
+	public function test_a_language_class_survives_an_earlier_quoted_angle_bracket(): void {
+		$result = ozhmd_filter_language_classes('<code title="a>b" class="language-php">x</code>');
+
+		$this->assertStringContainsString('class="language-php"', $result);
+	}
+
+	public function test_does_not_match_a_class_suffixed_attribute_name(): void {
+		// \bclass also matches inside data-class, which corrupts the tag.
+		$this->assertSame(
+			'<pre data-class="hack" class="language-php">y</pre>',
+			ozhmd_filter_language_classes('<pre data-class="hack" class="language-php">y</pre>')
+		);
+	}
 }
 ```
 
@@ -614,15 +636,22 @@ function ozhmd_is_valid_language_class(string $class): bool {
  * fence info strings. It runs anyway, because KSES can allow an attribute but
  * cannot pattern-match its value.
  *
+ * The tag matcher is quote aware. A naive [^>]* stops at the first > in the
+ * string, including one inside a quoted attribute value, which would leave the
+ * rest of the tag unexamined.
+ *
+ * If the regex engine fails, the original HTML is returned unfiltered. That is
+ * deliberate: this pass is the middle of three layers, and KSES runs after it.
+ *
  * @param string $html HTML to filter.
  * @return string HTML with only language-* classes left on pre and code tags.
  */
 function ozhmd_filter_language_classes(string $html): string {
 	$filtered = preg_replace_callback(
-		'#<(pre|code)\b([^>]*)>#i',
+		'#<(pre|code)\b((?:"[^"]*"|\'[^\']*\'|[^>"\'])*)>#i',
 		static function (array $tag_match): string {
 			$attributes = preg_replace_callback(
-				'/\bclass\s*=\s*(["\'])(.*?)\1/is',
+				'/(?<![\w-])class\s*=\s*(["\'])(.*?)\1/is',
 				static function (array $class_match): string {
 					$tokens = preg_split('/\s+/', trim($class_match[2]), -1, PREG_SPLIT_NO_EMPTY);
 					$kept   = array_filter($tokens ?: [], 'ozhmd_is_valid_language_class');
@@ -644,7 +673,7 @@ function ozhmd_filter_language_classes(string $html): string {
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `./tools/dev.sh tests/tools/vendor/bin/phpunit -c phpunit-unit.xml.dist`
-Expected: PASS, 33 tests total (9 from Task 1, 9 in CodeBlockTest, 15 in LanguageClassTest), 0 failures.
+Expected: PASS, 36 tests total (9 from Task 1, 9 in CodeBlockTest, 18 in LanguageClassTest), 0 failures.
 
 - [ ] **Step 5: Stage the work**
 
@@ -974,7 +1003,7 @@ function ozhmd_sanitize_options(array $input, array $defaults): array {
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `./tools/dev.sh tests/tools/vendor/bin/phpunit -c phpunit-unit.xml.dist`
-Expected: PASS, 58 tests total (33 from earlier tasks, 3 in PostStateTest, 15 in UploadHelpersTest, 7 in OptionsTest), 0 failures.
+Expected: PASS, 61 tests total (36 from earlier tasks, 3 in PostStateTest, 15 in UploadHelpersTest, 7 in OptionsTest), 0 failures.
 
 - [ ] **Step 5: Stage the work**
 
@@ -1536,7 +1565,7 @@ class Ozhmd_Converter {
 - [ ] **Step 6: Run the test to verify it passes**
 
 Run: `./tools/dev.sh tests/tools/vendor/bin/phpunit -c phpunit-unit.xml.dist`
-Expected: PASS, 71 tests total (58 from earlier tasks, 13 in ConverterTest), 0 failures.
+Expected: PASS, 74 tests total (61 from earlier tasks, 13 in ConverterTest), 0 failures.
 
 - [ ] **Step 7: Stage the work**
 
@@ -1648,7 +1677,7 @@ Expected: `No syntax errors detected in ozh-markdown.php`
 - [ ] **Step 3: Verify the unit suite still passes**
 
 Run: `./tools/dev.sh tests/tools/vendor/bin/phpunit -c phpunit-unit.xml.dist`
-Expected: PASS, 71 tests, 0 failures.
+Expected: PASS, 74 tests, 0 failures.
 
 - [ ] **Step 4: Stage the work**
 
@@ -1850,7 +1879,7 @@ Expected: PASS, 6 tests, 0 failures, preceded by the WordPress test suite's inst
 - [ ] **Step 7: Confirm the unit suite is unaffected**
 
 Run: `./tools/dev.sh tests/tools/vendor/bin/phpunit -c phpunit-unit.xml.dist`
-Expected: PASS, 71 tests, 0 failures.
+Expected: PASS, 74 tests, 0 failures.
 
 - [ ] **Step 8: Stage the work**
 
@@ -2392,7 +2421,7 @@ Run:
 node --test tests/js/
 ```
 
-Expected: 71 unit tests pass, 24 integration tests pass, 11 JS tests pass.
+Expected: 74 unit tests pass, 24 integration tests pass, 11 JS tests pass.
 
 - [ ] **Step 7: Verify the plugin activates in the real blog**
 
