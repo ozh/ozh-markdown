@@ -48,6 +48,7 @@ Every task's requirements implicitly include this section.
   ```
 
   Where a test already carries an inline comment explaining a subtlety, keep the comment where it is and let the DocBlock state the behaviour.
+- **JavaScript test files carry a file-level comment block instead**, since they have no class to document. The `node:test` descriptive string documents each individual case, so no per-test DocBlock is needed, but the file needs a header stating what it covers.
 - **No inline section-header comments** like `// Helpers` above groups of functions. DocBlocks serve that purpose.
 - **No `declare(strict_types=1)` in plugin files.** WordPress passes loosely typed values into hook callbacks (post IDs as numeric strings, for one), and coercive mode absorbs that. Test files may use it, since they control their own inputs.
 - **Formatting:** tabs for indentation in PHP and JS. No spaces immediately inside parentheses. Files end with a trailing blank line.
