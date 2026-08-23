@@ -130,3 +130,110 @@ function ozhmd_filter_language_classes(string $html): string {
 
 	return null === $filtered ? $html : $filtered;
 }
+
+/**
+ * Editing state of a post, derived from its stored Markdown.
+ *
+ * A post with no _ozhmd_markdown meta is legacy and must never have its
+ * post_content rewritten. An empty string is not the same as a missing key: it
+ * means a converted post whose body was emptied.
+ *
+ * @param string|null $markdown Value of the _ozhmd_markdown meta, null when absent.
+ * @return string Either 'legacy' or 'markdown'.
+ */
+function ozhmd_post_state(?string $markdown): string {
+	return null === $markdown ? 'legacy' : 'markdown';
+}
+
+/**
+ * Derive image alt text from an uploaded file name.
+ *
+ * @param string $filename Original file name, with or without a path.
+ * @return string File name without its directory or its last extension.
+ */
+function ozhmd_alt_from_filename(string $filename): string {
+	return pathinfo($filename, PATHINFO_FILENAME);
+}
+
+/**
+ * Build a Markdown image tag.
+ *
+ * Escapes the characters that would otherwise terminate the alt text or the
+ * URL, so a hostile file name cannot break out of the tag.
+ *
+ * @param string $alt Alt text.
+ * @param string $url Image URL.
+ * @return string Markdown image tag.
+ */
+function ozhmd_build_markdown_image(string $alt, string $url): string {
+	$safe_alt = str_replace(['[', ']'], ['\[', '\]'], $alt);
+	$safe_url = str_replace(['(', ')', ' '], ['%28', '%29', '%20'], $url);
+
+	return '![' . $safe_alt . '](' . $safe_url . ')';
+}
+
+/**
+ * Build the in-flight upload placeholder inserted at the cursor.
+ *
+ * Must stay byte-identical to buildPlaceholder() in ozhmd-upload-lib.js.
+ *
+ * @param string $filename Original file name.
+ * @return string Placeholder Markdown.
+ */
+function ozhmd_upload_placeholder(string $filename): string {
+	return '![Uploading ' . $filename . '...]()';
+}
+
+/**
+ * Tell whether a MIME type may be uploaded as an image.
+ *
+ * True only when the type is an image and the site already allows it. Never
+ * widens the site's allowed set.
+ *
+ * @param string   $mime          MIME type to test.
+ * @param string[] $allowed_mimes Allowed types, as returned by get_allowed_mime_types().
+ * @return bool True when the upload may proceed.
+ */
+function ozhmd_is_allowed_image_mime(string $mime, array $allowed_mimes): bool {
+	$mime = strtolower($mime);
+
+	if (0 !== strpos($mime, 'image/')) {
+		return false;
+	}
+
+	return in_array($mime, array_map('strtolower', array_values($allowed_mimes)), true);
+}
+
+/**
+ * Default plugin options.
+ *
+ * @return array<string, bool> Option keys mapped to their default values.
+ */
+function ozhmd_default_options(): array {
+	return [
+		'comments_enabled'   => true,
+		'comment_preview'    => false,
+		'prism_line_numbers' => false,
+	];
+}
+
+/**
+ * Coerce a submitted settings payload to the known option shape.
+ *
+ * The defaults array is used only as the whitelist of known keys. Unknown keys
+ * are dropped and absent keys become false, because an unchecked checkbox is
+ * simply missing from the payload rather than present and empty.
+ *
+ * @param array<string, mixed> $input    Raw submitted values.
+ * @param array<string, bool>  $defaults Known option keys and their defaults.
+ * @return array<string, bool> Sanitized options, one entry per known key.
+ */
+function ozhmd_sanitize_options(array $input, array $defaults): array {
+	$clean = [];
+
+	foreach ($defaults as $key => $default) {
+		$clean[$key] = array_key_exists($key, $input) && (bool) $input[$key];
+	}
+
+	return $clean;
+}
