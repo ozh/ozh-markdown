@@ -17,3 +17,5 @@ if (!file_exists($ozhmd_dev_autoload)) {
 require_once $ozhmd_dev_autoload;
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../includes/ozhmd-functions.php';
+require_once __DIR__ . '/../../includes/class-ozhmd-converter-factory.php';
+require_once __DIR__ . '/../../includes/class-ozhmd-converter.php';
