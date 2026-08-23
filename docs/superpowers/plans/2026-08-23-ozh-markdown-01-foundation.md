@@ -1401,6 +1401,32 @@ final class ConverterTest extends TestCase {
 		$this->assertStringContainsString('<del>x</del>', $html);
 	}
 
+	public function test_untrusted_converter_caps_nesting_depth(): void {
+		// max_nesting_level bounds pathological input. Without it, deeply
+		// nested markup is a cheap way to burn server time on a comment form.
+		$html = (string) $this->factory->create_untrusted()->convert(str_repeat('> ', 25) . 'boom');
+
+		$this->assertSame(20, substr_count($html, '<blockquote>'));
+	}
+
+	public function test_trusted_converter_does_not_cap_nesting_depth(): void {
+		$html = (string) $this->factory->create_trusted()->convert(str_repeat('> ', 25) . 'boom');
+
+		$this->assertSame(25, substr_count($html, '<blockquote>'));
+	}
+
+	public function test_untrusted_converter_strips_html_comments(): void {
+		$html = (string) $this->factory->create_untrusted()->convert('<!-- secret --> hi');
+
+		$this->assertStringNotContainsString('secret', $html);
+	}
+
+	public function test_untrusted_converter_neutralises_data_uri_images(): void {
+		$html = (string) $this->factory->create_untrusted()->convert('![x](data:text/html;base64,PHNjcmlwdD4=)');
+
+		$this->assertStringNotContainsString('data:text/html', $html);
+	}
+
 	public function test_factory_returns_a_new_instance_each_time(): void {
 		$this->assertNotSame($this->factory->create_trusted(), $this->factory->create_trusted());
 	}
@@ -1621,7 +1647,7 @@ class Ozhmd_Converter {
 - [ ] **Step 6: Run the test to verify it passes**
 
 Run: `./tools/dev.sh tests/tools/vendor/bin/phpunit -c phpunit-unit.xml.dist`
-Expected: PASS, 76 tests total (63 from earlier tasks, 13 in ConverterTest), 0 failures.
+Expected: PASS, 80 tests total (63 from earlier tasks, 17 in ConverterTest), 0 failures.
 
 - [ ] **Step 7: Stage the work**
 
@@ -1733,7 +1759,7 @@ Expected: `No syntax errors detected in ozh-markdown.php`
 - [ ] **Step 3: Verify the unit suite still passes**
 
 Run: `./tools/dev.sh tests/tools/vendor/bin/phpunit -c phpunit-unit.xml.dist`
-Expected: PASS, 76 tests, 0 failures.
+Expected: PASS, 80 tests, 0 failures.
 
 - [ ] **Step 4: Stage the work**
 
@@ -1935,7 +1961,7 @@ Expected: PASS, 6 tests, 0 failures, preceded by the WordPress test suite's inst
 - [ ] **Step 7: Confirm the unit suite is unaffected**
 
 Run: `./tools/dev.sh tests/tools/vendor/bin/phpunit -c phpunit-unit.xml.dist`
-Expected: PASS, 76 tests, 0 failures.
+Expected: PASS, 80 tests, 0 failures.
 
 - [ ] **Step 8: Stage the work**
 
@@ -2477,7 +2503,7 @@ Run:
 node --test tests/js/
 ```
 
-Expected: 76 unit tests pass, 24 integration tests pass, 13 JS tests pass.
+Expected: 80 unit tests pass, 24 integration tests pass, 13 JS tests pass.
 
 - [ ] **Step 7: Verify the plugin activates in the real blog**
 
