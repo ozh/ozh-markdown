@@ -28,6 +28,7 @@ require_once OZHMD_DIR . 'vendor/autoload.php';
 require_once OZHMD_DIR . 'includes/ozhmd-functions.php';
 require_once OZHMD_DIR . 'includes/class-ozhmd-converter-factory.php';
 require_once OZHMD_DIR . 'includes/class-ozhmd-converter.php';
+require_once OZHMD_DIR . 'includes/class-ozhmd-post-types.php';
 
 /**
  * Construct the plugin services and register their hooks.
