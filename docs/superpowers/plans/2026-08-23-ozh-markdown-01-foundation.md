@@ -6,7 +6,7 @@
 
 **Architecture:** Pure logic lives in prefixed free functions in a single WordPress-free file, tested by plain PHPUnit with no bootstrap. Anything with dependencies becomes a small class whose constructor only stores injected dependencies and whose hooks are registered by a separate `register_hooks()`. A single `ozhmd_bootstrap()` on `plugins_loaded` wires everything together.
 
-**Tech Stack:** PHP 8.0+ (running on 8.5), `league/commonmark` 2.10, PHPUnit 11.5, `wp-phpunit` 7.1, `yoast/phpunit-polyfills` 4.0, Node's built-in `node:test`.
+**Tech Stack:** PHP 8.0+ (running on 8.5), `league/commonmark` 2.10, PHPUnit 11.5 and nothing else in the test path, Node's built-in `node:test`.
 
 **Source design:** `docs/superpowers/specs/2026-08-22-ozh-markdown-design.md`. Read it before starting.
 
@@ -71,9 +71,11 @@ Every task's requirements implicitly include this section.
 | `includes/class-ozhmd-converter-factory.php` | Builds the two configured converters. | 5 |
 | `includes/class-ozhmd-converter.php` | Holds the two injected converters. No configuration. | 5 |
 | `ozh-markdown.php` | Plugin header, constants, requires, bootstrap, activation. | 6 |
-| `phpunit-integration.xml.dist` | wp-phpunit suite. | 7 |
-| `tests/integration/wp-tests-config.php` | Points the WordPress test suite at a dedicated database. | 7 |
-| `tests/integration/bootstrap.php` | Loads the WordPress test library and the plugin. | 7 |
+| `phpunit-integration.xml.dist` | Integration suite, PHPUnit only. | 7 |
+| `tests/integration/config.php` | Points a real WordPress boot at a dedicated database. | 7 |
+| `tests/integration/install.php` | Idempotent schema installer for the test database. | 7 |
+| `tests/integration/bootstrap.php` | Boots WordPress and loads the plugin. | 7 |
+| `tests/integration/class-ozhmd-integration-test-case.php` | Per-test isolation: transaction rollback and registry restore. | 7 |
 | `includes/class-ozhmd-post-types.php` | Eligibility query. Hook registration arrives in plan 2. | 8 |
 | `includes/class-ozhmd-settings.php` | Options page. | 9 |
 
@@ -153,9 +155,7 @@ Expected: `/var/www/html/planetozh.com/blog/wp-content/plugins/ozh-markdown`
 	"description": "Development-only tooling for Ozh' Markdown Plugin. Never shipped.",
 	"license": "GPL-2.0-or-later",
 	"require": {
-		"phpunit/phpunit": "^11.5",
-		"yoast/phpunit-polyfills": "^4.0",
-		"wp-phpunit/wp-phpunit": "^7.1"
+		"phpunit/phpunit": "^11.5"
 	},
 	"config": {
 		"allow-plugins": false
@@ -1154,7 +1154,7 @@ test('isImageFile rejects missing or non string types', () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run (on the host, from the plugin root): `node --test tests/js/`
+Run (on the host, from the plugin root): `node --test tests/js/*.test.js`
 Expected: FAIL with `Cannot find module '../../assets/js/lib/ozhmd-upload-lib.js'`.
 
 - [ ] **Step 3: Write the minimal implementation**
@@ -1267,7 +1267,7 @@ Expected: FAIL with `Cannot find module '../../assets/js/lib/ozhmd-upload-lib.js
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run (on the host): `node --test tests/js/`
+Run (on the host): `node --test tests/js/*.test.js`
 Expected: PASS, 13 tests, 0 failures.
 
 - [ ] **Step 5: Stage the work**
@@ -1775,208 +1775,45 @@ feat: add plugin bootstrap and activation
 
 ---
 
-### Task 7: wp-phpunit integration harness
+### Task 7: Integration harness (superseded and rebuilt)
 
-**Files:**
-- Create: `phpunit-integration.xml.dist`
-- Create: `tests/integration/wp-tests-config.php`
-- Create: `tests/integration/bootstrap.php`
-- Test: `tests/integration/BootstrapTest.php`
+**Status: complete.** This task was planned as a `wp-phpunit` harness. That approach was abandoned mid-task and replaced, on the repo owner's ruling, with a harness depending on `phpunit/phpunit` alone. The section below records what was actually built. The committed code is the authority.
 
-**Interfaces:**
-- Consumes: `ozh-markdown.php` from Task 6.
-- Produces: a runnable integration suite. Later tasks and plans add test classes to `tests/integration/` and run them with the command from Step 5.
+**Why the original approach failed.** `wp-phpunit` ships WordPress core's test library, whose `WP_UnitTestCase::set_up()` calls `expectDeprecated()`, which uses `PHPUnit\Util\Test::parseTestMethodAnnotations()` and `getName(false)`. Both were removed in PHPUnit 10. This is present in the 7.1.0 release and in `dev-master` from WordPress trunk, so it is a dead end rather than a version lag. Staying on it would have pinned the whole project to PHPUnit 9.6 indefinitely.
 
-**Safety, read before running anything:** the WordPress test suite **drops and recreates every table** in the database it is pointed at. `DB_NAME` below is `ozhmd_tests`, which must never be the blog's own database. Verify the value before the first run.
+**Files, as built:**
+- `tests/integration/config.php` - `ABSPATH`, DB constants for the dedicated `ozhmd_tests` database, table prefix, debug constants, and `WP_SITEURL` / `WP_HOME`.
+- `tests/integration/install.php` - idempotent schema installer, run in its own process.
+- `tests/integration/bootstrap.php` - boots real WordPress, loads the plugin through `muplugins_loaded` so its own `plugins_loaded` bootstrap fires, and guards that the posts table is InnoDB.
+- `tests/integration/class-ozhmd-integration-test-case.php` - `Ozhmd_Integration_Test_Case`, extending `PHPUnit\Framework\TestCase`.
+- `phpunit-integration.xml.dist` - PHPUnit 11 schema.
+- `tests/integration/BootstrapTest.php` - smoke tests plus five isolation proofs.
 
-- [ ] **Step 1: Create the test database**
+**The `WP_SITEURL` trap.** `wp_install()` calls `wp_guess_url()`, which falls back to `$_SERVER` values that do not exist under the CLI SAPI, persisting an empty `siteurl`. That makes `is_blog_installed()` permanently false, and every later boot dies in `dead_db()` behind a generic "Error establishing a database connection" page. Defining `WP_SITEURL` and `WP_HOME` is what fixes it.
 
-Run:
+**What the base test case isolates.** A database transaction opened in `setUp()` and rolled back in `tearDown()`, plus snapshot and restore of six globals: `$wp_filter` (cloned per hook, since `WP_Hook` is mutable), `$wp_post_types`, `$wp_taxonomies`, `$_wp_post_type_features`, `$wp_meta_boxes` and `$current_screen`. The object cache is flushed after the rollback, not before.
 
-```bash
-docker exec -i dev-mariadb mariadb -uroot -e "CREATE DATABASE IF NOT EXISTS ozhmd_tests"
-```
+`$wp_post_types` and `$_wp_post_type_features` are both required: `post_type_exists()` reads the first, `get_post_types_by_support()` reads the second. Restoring only the first produces isolation tests that pass while the leak is still live.
 
-Verify it is reachable from the web container:
+**Isolation proofs are pairs, and each assert half carries `#[Depends]`.** Without it, `--order-by=reverse` flips each pair so the assertion runs before its own setup and passes trivially. Measured with all restores disabled: default order caught 5 failures, reverse order caught 1. With `#[Depends]`, reverse catches 5. Use the PHP attribute, never the `@depends` annotation, since annotation parsing is what made `wp-phpunit` unusable.
 
-```bash
-./tools/dev.sh php -r '$m = @new mysqli("mariadb", "root", "", "ozhmd_tests"); echo $m->connect_error ?: "OK";'
-```
+**Constraints for later tasks writing integration tests:**
+- Extend `Ozhmd_Integration_Test_Case`, and `require_once __DIR__ . '/class-ozhmd-integration-test-case.php';` at the top of the file.
+- Lifecycle methods are PHPUnit's `setUp(): void` and `tearDown(): void`, not WordPress's `set_up()`. Always call `parent::setUp()`.
+- There are no WordPress test factories. Create fixtures with real functions: `wp_insert_post()`, `wp_insert_user()`, `wp_insert_comment()`.
+- Post type slugs must be 20 characters or fewer. WordPress silently refuses longer ones, which makes assertions pass for the wrong reason.
+- Do not hand-clean state the base class already restores. Manual cleanup masks regressions in the harness.
 
-Expected: `OK`. If this prints a connection error instead, the MariaDB root account is not reachable from the web container, and that must be resolved before continuing.
+**Known isolation gaps**, recorded for later plans rather than fixed now: DDL and `dbDelta` escape the transaction through MySQL's implicit commit; `$wp_scripts` / `$wp_styles` are not restored (plan 3's Prism enqueue tests); the Settings API globals are not restored (Task 9 below); registered meta is not restored (plan 2); `$wp_rewrite`, `$shortcode_tags` and `WP_REST_Server` state need explicit handling for plan 3's REST tests.
 
-- [ ] **Step 2: Create the WordPress test configuration**
-
-`tests/integration/wp-tests-config.php`:
-
-```php
-<?php
-/**
- * WordPress test suite configuration.
- *
- * Points the test suite at the local Docker stack and at a dedicated database.
- * The suite drops and recreates every table on boot, so DB_NAME must never be
- * the blog's own database.
- */
-
-define('ABSPATH', '/var/www/html/planetozh.com/blog/');
-
-define('DB_NAME', 'ozhmd_tests');
-define('DB_USER', 'root');
-define('DB_PASSWORD', '');
-define('DB_HOST', 'mariadb');
-define('DB_CHARSET', 'utf8mb4');
-define('DB_COLLATE', '');
-
-$table_prefix = 'wptests_';
-
-define('WP_TESTS_DOMAIN', 'example.org');
-define('WP_TESTS_EMAIL', 'admin@example.org');
-define('WP_TESTS_TITLE', 'Ozh Markdown Test Blog');
-define('WP_PHP_BINARY', 'php');
-define('WP_DEBUG', true);
-```
-
-- [ ] **Step 3: Create the integration bootstrap and configuration**
-
-`tests/integration/bootstrap.php`:
-
-```php
-<?php
-/**
- * Bootstrap for the wp-phpunit suite.
- *
- * Loads the WordPress test library, then the plugin, against the dedicated
- * test database configured in wp-tests-config.php.
- */
-
-$ozhmd_dev_autoload = __DIR__ . '/../tools/vendor/autoload.php';
-
-if (!file_exists($ozhmd_dev_autoload)) {
-	fwrite(STDERR, "Dev tooling missing. Run: ./tools/dev.sh composer install -d tests/tools\n");
-	exit(1);
-}
-
-require_once $ozhmd_dev_autoload;
-
-putenv('WP_TESTS_CONFIG_FILE_PATH=' . __DIR__ . '/wp-tests-config.php');
-
-$ozhmd_tests_dir = __DIR__ . '/../tools/vendor/wp-phpunit/wp-phpunit';
-
-require_once $ozhmd_tests_dir . '/includes/functions.php';
-
-tests_add_filter('muplugins_loaded', static function (): void {
-	require dirname(__DIR__, 2) . '/ozh-markdown.php';
-});
-
-require $ozhmd_tests_dir . '/includes/bootstrap.php';
-```
-
-`phpunit-integration.xml.dist`:
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-		 xsi:noNamespaceSchemaLocation="tests/tools/vendor/phpunit/phpunit/phpunit.xsd"
-		 bootstrap="tests/integration/bootstrap.php"
-		 cacheDirectory="tests/.phpunit.cache"
-		 colors="true"
-		 failOnWarning="true">
-	<testsuites>
-		<testsuite name="integration">
-			<directory>tests/integration</directory>
-		</testsuite>
-	</testsuites>
-	<source>
-		<include>
-			<directory suffix=".php">includes</directory>
-		</include>
-	</source>
-</phpunit>
-```
-
-- [ ] **Step 4: Write the failing test**
-
-`tests/integration/BootstrapTest.php`:
-
-```php
-<?php
-
-declare(strict_types=1);
-
-/**
- * Smoke test proving WordPress and the plugin both loaded.
- */
-final class BootstrapTest extends WP_UnitTestCase {
-
-	public function test_wordpress_is_loaded(): void {
-		$this->assertTrue(defined('ABSPATH'));
-		$this->assertTrue(function_exists('add_action'));
-	}
-
-	public function test_the_plugin_file_was_loaded(): void {
-		$this->assertTrue(defined('OZHMD_VERSION'));
-		$this->assertSame('_ozhmd_markdown', OZHMD_POST_META_KEY);
-		$this->assertSame('_ozhmd_original_content', OZHMD_ORIGINAL_META_KEY);
-	}
-
-	public function test_the_bootstrap_ran(): void {
-		$this->assertGreaterThan(0, did_action('ozhmd_loaded'));
-	}
-
-	public function test_pure_functions_are_available(): void {
-		$this->assertTrue(function_exists('ozhmd_eligible_post_types'));
-		$this->assertTrue(function_exists('ozhmd_default_options'));
-	}
-
-	public function test_activation_seeds_the_default_options(): void {
-		delete_option('ozhmd_options');
-
-		ozhmd_activate();
-
-		$this->assertSame(ozhmd_default_options(), get_option('ozhmd_options'));
-	}
-
-	public function test_activation_does_not_overwrite_existing_options(): void {
-		$existing = ['comments_enabled' => false, 'comment_preview' => true, 'prism_line_numbers' => true];
-		update_option('ozhmd_options', $existing);
-
-		ozhmd_activate();
-
-		$this->assertSame($existing, get_option('ozhmd_options'));
-	}
-}
-```
-
-- [ ] **Step 5: Run the test to verify it fails**
-
-Run: `./tools/dev.sh tests/tools/vendor/bin/phpunit -c phpunit-integration.xml.dist`
-Expected: FAIL. Before `tests/integration/bootstrap.php` exists the run cannot start at all; once the files above are in place this step is the first real execution and should surface any database or path misconfiguration.
-
-- [ ] **Step 6: Run the test to verify it passes**
-
-Run: `./tools/dev.sh tests/tools/vendor/bin/phpunit -c phpunit-integration.xml.dist`
-Expected: PASS, 6 tests, 0 failures, preceded by the WordPress test suite's installation output.
-
-- [ ] **Step 7: Confirm the unit suite is unaffected**
-
-Run: `./tools/dev.sh tests/tools/vendor/bin/phpunit -c phpunit-unit.xml.dist`
-Expected: PASS, 80 tests, 0 failures.
-
-- [ ] **Step 8: Stage the work**
+**Commands:**
 
 ```bash
-git add phpunit-integration.xml.dist tests/integration/wp-tests-config.php \
-        tests/integration/bootstrap.php tests/integration/BootstrapTest.php
+./tools/dev.sh tests/tools/vendor/bin/phpunit -c phpunit-integration.xml.dist
+./tools/dev.sh tests/tools/vendor/bin/phpunit -c phpunit-integration.xml.dist --order-by=random
 ```
 
-Commit message to use once the owner asks for commits:
-
-```
-test: add wp-phpunit integration harness
-```
-
----
+The test database rebuilds itself: dropping `ozhmd_tests` entirely is safe, the next run reinstalls it.
 
 ### Task 8: Post type eligibility against the WordPress registry
 
@@ -1998,15 +1835,27 @@ test: add wp-phpunit integration harness
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/class-ozhmd-integration-test-case.php';
+
 /**
  * Eligibility resolved against the real WordPress post type registry.
  */
-final class PostTypesQueryTest extends WP_UnitTestCase {
+final class PostTypesQueryTest extends Ozhmd_Integration_Test_Case {
 
+	/**
+	 * Resolver under test.
+	 *
+	 * @var Ozhmd_Post_Types
+	 */
 	private Ozhmd_Post_Types $post_types;
 
-	public function set_up(): void {
-		parent::set_up();
+	/**
+	 * Build a fresh resolver for each test.
+	 *
+	 * @return void
+	 */
+	protected function setUp(): void {
+		parent::setUp();
 		$this->post_types = new Ozhmd_Post_Types();
 	}
 
@@ -2025,31 +1874,28 @@ final class PostTypesQueryTest extends WP_UnitTestCase {
 	}
 
 	public function test_a_custom_post_type_supporting_the_editor_is_eligible(): void {
+		// No unregister_post_type() cleanup here on purpose. The harness
+		// restores $wp_post_types and $_wp_post_type_features in teardown, so
+		// manual cleanup would mask a regression in that restore.
 		register_post_type('ozhmd_book', ['supports' => ['title', 'editor']]);
 
 		$this->assertContains('ozhmd_book', $this->post_types->eligible());
-
-		unregister_post_type('ozhmd_book');
 	}
 
 	public function test_a_custom_post_type_without_editor_support_is_not_eligible(): void {
 		register_post_type('ozhmd_link', ['supports' => ['title']]);
 
 		$this->assertNotContains('ozhmd_link', $this->post_types->eligible());
-
-		unregister_post_type('ozhmd_link');
 	}
 
 	public function test_the_filter_can_exclude_a_further_post_type(): void {
-		$exclude_pages = static function (array $excluded): array {
+		add_filter('ozhmd_excluded_post_types', static function (array $excluded): array {
 			$excluded[] = 'page';
 
 			return $excluded;
-		};
+		});
 
-		add_filter('ozhmd_excluded_post_types', $exclude_pages);
 		$eligible = $this->post_types->eligible();
-		remove_filter('ozhmd_excluded_post_types', $exclude_pages);
 
 		$this->assertNotContains('page', $eligible);
 		$this->assertContains('post', $eligible);
@@ -2059,10 +1905,15 @@ final class PostTypesQueryTest extends WP_UnitTestCase {
 		$eligible = $this->post_types->eligible();
 
 		$this->assertSame(range(0, count($eligible) - 1), array_keys($eligible));
-		$this->assertContainsOnly('string', $eligible);
+		$this->assertContainsOnlyString($eligible);
 	}
 }
 ```
+
+Two notes on this test file, both consequences of the harness built in Task 7:
+
+- Post type slugs must be **20 characters or fewer**. WordPress silently refuses longer ones, which would make an assertion pass for the wrong reason. `ozhmd_book` and `ozhmd_link` are within the limit.
+- `remove_filter()` and `unregister_post_type()` cleanup is deliberately omitted. The base test case restores `$wp_filter`, `$wp_post_types` and `$_wp_post_type_features` after every test, and hand cleanup would hide a regression in that machinery.
 
 - [ ] **Step 2: Run the test to verify it fails**
 
@@ -2157,17 +2008,50 @@ feat: resolve eligible post types from the WordPress registry
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/class-ozhmd-integration-test-case.php';
+
 /**
  * Options page registration and option reading.
  */
-final class SettingsTest extends WP_UnitTestCase {
+final class SettingsTest extends Ozhmd_Integration_Test_Case {
 
+	/**
+	 * Settings page under test.
+	 *
+	 * @var Ozhmd_Settings
+	 */
 	private Ozhmd_Settings $settings;
 
-	public function set_up(): void {
-		parent::set_up();
+	/**
+	 * Build a fresh settings page against a clean option row.
+	 *
+	 * @return void
+	 */
+	protected function setUp(): void {
+		parent::setUp();
 		$this->settings = new Ozhmd_Settings(new Ozhmd_Post_Types());
 		delete_option(Ozhmd_Settings::OPTION_NAME);
+	}
+
+	/**
+	 * Create an administrator and make them the current user.
+	 *
+	 * The WordPress test factories are not available in this harness, so
+	 * tests create fixtures with the real WordPress functions.
+	 *
+	 * @return int New user ID.
+	 */
+	private function login_as_administrator(): int {
+		$user_id = wp_insert_user([
+			'user_login' => 'ozhmd_admin_' . uniqid(),
+			'user_pass'  => 'password',
+			'user_email' => uniqid() . '@example.org',
+			'role'       => 'administrator',
+		]);
+
+		wp_set_current_user($user_id);
+
+		return $user_id;
 	}
 
 	public function test_the_option_name_matches_the_spec(): void {
@@ -2233,7 +2117,7 @@ final class SettingsTest extends WP_UnitTestCase {
 	}
 
 	public function test_the_page_renders_a_field_for_every_toggle(): void {
-		wp_set_current_user(self::factory()->user->create(['role' => 'administrator']));
+		$this->login_as_administrator();
 		$this->settings->register_settings();
 
 		ob_start();
@@ -2246,7 +2130,7 @@ final class SettingsTest extends WP_UnitTestCase {
 	}
 
 	public function test_the_page_lists_the_handled_post_types(): void {
-		wp_set_current_user(self::factory()->user->create(['role' => 'administrator']));
+		$this->login_as_administrator();
 		$this->settings->register_settings();
 
 		ob_start();
@@ -2500,7 +2384,7 @@ Run:
 ```bash
 ./tools/dev.sh tests/tools/vendor/bin/phpunit -c phpunit-unit.xml.dist
 ./tools/dev.sh tests/tools/vendor/bin/phpunit -c phpunit-integration.xml.dist
-node --test tests/js/
+node --test tests/js/*.test.js
 ```
 
 Expected: 80 unit tests pass, 24 integration tests pass, 13 JS tests pass.

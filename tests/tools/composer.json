@@ -3,9 +3,7 @@
 	"description": "Development-only tooling for Ozh' Markdown Plugin. Never shipped.",
 	"license": "GPL-2.0-or-later",
 	"require": {
-		"phpunit/phpunit": "^11.5",
-		"yoast/phpunit-polyfills": "^4.0",
-		"wp-phpunit/wp-phpunit": "^7.1"
+		"phpunit/phpunit": "^11.5"
 	},
 	"config": {
 		"allow-plugins": false
