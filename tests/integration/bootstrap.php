@@ -39,6 +39,45 @@ function ozhmd_ensure_test_database_installed(): void {
 }
 
 /**
+ * Fail hard if the posts table is not InnoDB.
+ *
+ * Ozhmd_Integration_Test_Case relies on a real transaction that is rolled
+ * back in tearDown() to keep tests from leaking into one another. MyISAM
+ * does not support transactions: the ROLLBACK would silently do nothing,
+ * and every isolation proof would keep passing while no longer proving
+ * anything, with no error to explain why. This check turns that invisible
+ * failure mode into a loud one at boot time, before any test runs.
+ *
+ * @return void
+ */
+function ozhmd_require_innodb_posts_table(): void {
+	$table  = $GLOBALS['table_prefix'] . 'posts';
+	$mysqli = new mysqli(DB_HOST, DB_USER, DB_PASSWORD, DB_NAME);
+
+	if ($mysqli->connect_error) {
+		fwrite(STDERR, 'Could not connect to the test database to check its storage engine: ' . $mysqli->connect_error . PHP_EOL);
+		exit(1);
+	}
+
+	$result = $mysqli->query(
+		"SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '" . $mysqli->real_escape_string($table) . "'"
+	);
+	$row    = $result instanceof mysqli_result ? $result->fetch_assoc() : null;
+	$engine = $row['ENGINE'] ?? null;
+
+	$mysqli->close();
+
+	if ('InnoDB' !== $engine) {
+		fwrite(STDERR, sprintf(
+			'The %s table is %s, not InnoDB. The isolation harness depends on transactions, which MyISAM does not support. Refusing to run rather than let tests silently stop being isolated.' . PHP_EOL,
+			$table,
+			$engine ?? 'missing'
+		));
+		exit(1);
+	}
+}
+
+/**
  * Register a hook callback before WordPress has loaded.
  *
  * WordPress converts these raw arrays into WP_Hook objects during
@@ -61,6 +100,7 @@ function ozhmd_preload_filter(string $hook, callable $callback, int $priority = 
 }
 
 ozhmd_ensure_test_database_installed();
+ozhmd_require_innodb_posts_table();
 
 ozhmd_preload_filter('muplugins_loaded', static function (): void {
 	require dirname(__DIR__, 2) . '/ozh-markdown.php';

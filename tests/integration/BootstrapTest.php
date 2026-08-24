@@ -2,11 +2,23 @@
 
 declare(strict_types=1);
 
+use PHPUnit\Framework\Attributes\Depends;
+
 require_once __DIR__ . '/class-ozhmd-integration-test-case.php';
 
 /**
  * Smoke tests proving WordPress and the plugin both loaded, plus isolation
  * proofs for the base test case's per-test rollback and registry restore.
+ *
+ * Each isolation proof is a pair: a setup half that mutates state, and an
+ * assertion half that checks the mutation is gone. The assertion half
+ * carries a #[Depends] on its setup half, using the PHP attribute rather
+ * than the @depends annotation, since annotation parsing is what pushed
+ * this harness off wp-phpunit in the first place. PHPUnit resolves
+ * dependencies after applying --order-by, so each pair keeps its relative
+ * order under any test order, including --order-by=reverse and
+ * --order-by=random; without it, a reversed run lets the assertion half run
+ * first and pass trivially, before anything has mutated state to detect.
  */
 final class BootstrapTest extends Ozhmd_Integration_Test_Case {
 
@@ -101,6 +113,7 @@ final class BootstrapTest extends Ozhmd_Integration_Test_Case {
 	 *
 	 * @return void
 	 */
+	#[Depends('test_isolation_a_post_is_created')]
 	public function test_isolation_the_post_does_not_leak_into_the_next_test(): void {
 		$posts = get_posts([
 			'post_type'   => 'post',
@@ -130,6 +143,7 @@ final class BootstrapTest extends Ozhmd_Integration_Test_Case {
 	 *
 	 * @return void
 	 */
+	#[Depends('test_isolation_a_filter_is_added')]
 	public function test_isolation_the_filter_does_not_leak_into_the_next_test(): void {
 		$this->assertSame('clean', apply_filters('ozhmd_isolation_proof_filter', 'clean'));
 	}
@@ -153,6 +167,7 @@ final class BootstrapTest extends Ozhmd_Integration_Test_Case {
 	 *
 	 * @return void
 	 */
+	#[Depends('test_isolation_a_post_type_is_registered')]
 	public function test_isolation_the_post_type_does_not_leak_into_the_next_test(): void {
 		$this->assertFalse(post_type_exists('ozhmd_isolation_cpt'));
 	}
@@ -177,6 +192,7 @@ final class BootstrapTest extends Ozhmd_Integration_Test_Case {
 	 *
 	 * @return void
 	 */
+	#[Depends('test_isolation_a_post_type_feature_is_registered')]
 	public function test_isolation_the_post_type_feature_does_not_leak_into_the_next_test(): void {
 		$this->assertNotContains('ozhmd_feature_cpt', get_post_types_by_support('editor'));
 	}
@@ -208,6 +224,7 @@ final class BootstrapTest extends Ozhmd_Integration_Test_Case {
 	 *
 	 * @return void
 	 */
+	#[Depends('test_isolation_a_meta_box_is_registered')]
 	public function test_isolation_the_meta_box_does_not_leak_into_the_next_test(): void {
 		global $wp_meta_boxes;
 
