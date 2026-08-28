@@ -51,7 +51,8 @@ final class PostTypesQueryTest extends Ozhmd_Integration_Test_Case {
 	}
 
 	/**
-	 * A custom post type supporting the editor is eligible.
+	 * Registering a custom post type with editor support is enough to pick it
+	 * up, with no further wiring needed.
 	 *
 	 * @return void
 	 */
@@ -65,7 +66,7 @@ final class PostTypesQueryTest extends Ozhmd_Integration_Test_Case {
 	}
 
 	/**
-	 * A custom post type without editor support is not eligible.
+	 * A custom post type that omits editor from its supports array is left out.
 	 *
 	 * @return void
 	 */
@@ -76,7 +77,8 @@ final class PostTypesQueryTest extends Ozhmd_Integration_Test_Case {
 	}
 
 	/**
-	 * The filter can exclude a further post type.
+	 * Appending to the ozhmd_excluded_post_types filter removes one type
+	 * without touching the eligibility of the others.
 	 *
 	 * @return void
 	 */
@@ -94,7 +96,8 @@ final class PostTypesQueryTest extends Ozhmd_Integration_Test_Case {
 	}
 
 	/**
-	 * The result is a reindexed list of strings.
+	 * eligible() returns a plain, zero-indexed list of strings rather than an
+	 * associative or gapped array.
 	 *
 	 * @return void
 	 */

@@ -9,7 +9,7 @@
  * Text Domain: ozh-markdown
  * Requires PHP: 8.0
  *
- * @package Oz_Markdown
+ * @package Ozh_Markdown
  */
 
 if (!defined('ABSPATH')) {
@@ -67,4 +67,4 @@ function ozhmd_activate(): void {
 	}
 }
 
-register_activation_hook(__FILE__, 'ozhmd_activate');
+register_activation_hook(OZHMD_FILE, 'ozhmd_activate');
