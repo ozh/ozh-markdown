@@ -7,7 +7,7 @@
  * Author:      Ozh
  * License:     GPL-2.0-or-later
  * Text Domain: ozh-markdown
- * Requires PHP: 8.0
+ * Requires PHP: 8.5
  *
  * @package Ozh_Markdown
  */

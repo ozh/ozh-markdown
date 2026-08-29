@@ -4,11 +4,14 @@
 	"type": "wordpress-plugin",
 	"license": "GPL-2.0-or-later",
 	"require": {
-		"php": ">=8.0",
+		"php": ">=8.5",
 		"league/commonmark": "^2.10"
 	},
 	"config": {
 		"optimize-autoloader": true,
-		"sort-packages": true
+		"sort-packages": true,
+		"platform": {
+			"php": "8.5"
+		}
 	}
 }

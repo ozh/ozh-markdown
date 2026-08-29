@@ -27,7 +27,7 @@ Explicitly deferred to later plans, so nothing below is a gap:
 Every task's requirements implicitly include this section.
 
 - **Naming, verbatim:** plugin name `Ozh' Markdown Plugin`; text domain and slug `ozh-markdown`; function prefix `ozhmd_`; class prefix `Ozhmd_`; filter and action prefix `ozhmd_`; post meta key `_ozhmd_markdown`; comment meta key `_ozhmd_markdown`; single option array `ozhmd_options`.
-- **PHP floor:** 8.0. Do not use syntax newer than 8.0 (no `readonly` properties, no enums, no `json_validate()`).
+- **PHP floor:** 8.5, per the owner's ruling during the final review. The dev container and the production host both run 8.5, and the vendored dependencies require 8.2+, so 8.0 was never actually deliverable. Modern syntax is permitted.
 - **Typed signatures everywhere:** parameter types, return types, nullable types (`?int`) wherever the code allows. `void` where nothing is returned.
 - **Opening brace on the same line**, for functions, classes and control structures.
 - **DocBlocks before every class, method and function**, with `@param` and `@return`. Code comments in English.

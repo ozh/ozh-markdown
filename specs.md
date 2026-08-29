@@ -23,7 +23,7 @@ The final published content must be plain HTML stored in `post_content` / `comme
 
 - Shared hosting, no root/sudo access, no shell access assumed on the production server.
 - Standard WordPress plugin (PHP, no external services, no build step required at runtime).
-- Assume PHP 8.0+ unless told otherwise (typed signatures are used throughout, see conventions).
+- Target PHP 8.5 (typed signatures are used throughout, see conventions). The dev container and the production host both run 8.5, so the plugin header, `composer.json` and the vendored dependencies all declare the same floor.
 - No Node/Composer step should be required to *use* the plugin once installed. Dependencies must be committed to the repo (vendored), not installed on the fly on the host.
 
 ### Development environment
