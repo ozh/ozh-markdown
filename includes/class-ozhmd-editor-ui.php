@@ -204,7 +204,9 @@ class Ozhmd_Editor_UI {
 
 		// The classic editor is removed, so its media modal has to be loaded
 		// explicitly for the Add Media button to work.
-		wp_enqueue_media(['post' => get_the_ID()]);
+		// get_the_ID() is false on post-new.php, so pass a real ID or nothing.
+		$post_id = (int) get_the_ID();
+		wp_enqueue_media($post_id > 0 ? ['post' => $post_id] : []);
 
 		wp_enqueue_style('dashicons');
 		wp_enqueue_style('ozhmd-codemirror', OZHMD_URL . 'assets/css/vendor/codemirror.css', [], OZHMD_VERSION);

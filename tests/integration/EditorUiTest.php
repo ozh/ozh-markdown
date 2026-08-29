@@ -98,6 +98,40 @@ final class EditorUiTest extends Ozhmd_Integration_Test_Case {
 	}
 
 	/**
+	 * Assets still enqueue after the classic editor has been removed.
+	 *
+	 * This is the real edit screen order: edit-form-advanced.php fires
+	 * add_meta_boxes at line 264, which strips editor support, and
+	 * admin_enqueue_scripts only later at line 418. A previous version asked
+	 * eligible() at that point, got nothing back because it reads editor
+	 * support, and enqueued no assets at all.
+	 *
+	 * @return void
+	 */
+	public function test_assets_enqueue_after_the_editor_has_been_removed(): void {
+		$this->require_admin_includes();
+
+		// Calls the hook callbacks directly rather than firing add_meta_boxes.
+		// The plugin's bootstrap already has its own Ozhmd_Post_Types hooked,
+		// and it would strip support before this instance saw the action, so
+		// the action route would exercise two instances where production has
+		// exactly one.
+		$this->post_types->remove_default_editor('post');
+
+		$this->assertFalse(post_type_supports('post', 'editor'), 'Precondition: support must be gone.');
+		$this->assertContains('post', $this->post_types->eligible(), 'post must stay eligible after the strip.');
+
+		set_current_screen('post');
+		$GLOBALS['current_screen']->post_type = 'post';
+
+		$this->editor->enqueue_assets('post-new.php');
+
+		foreach (['ozhmd-editor', 'ozhmd-toolbar', 'ozhmd-upload', 'ozhmd-codemirror', 'ozhmd-marked', 'ozhmd-prism'] as $handle) {
+			$this->assertTrue(wp_script_is($handle, 'enqueued'), 'not enqueued: ' . $handle);
+		}
+	}
+
+	/**
 	 * Every toolbar button carries an action, an icon and a label.
 	 *
 	 * @return void

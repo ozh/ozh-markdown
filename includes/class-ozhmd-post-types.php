@@ -12,18 +12,39 @@
 class Ozhmd_Post_Types {
 
 	/**
+	 * Post types this instance has stripped 'editor' support from.
+	 *
+	 * @var string[]
+	 */
+	private array $stripped = [];
+
+	/**
 	 * Post types eligible for the Markdown editor.
 	 *
 	 * Every post type supporting the 'editor' feature, minus the built-in
 	 * exclusion list as extended by the ozhmd_excluded_post_types filter.
 	 *
-	 * Deliberately not memoized. Plugins and themes register post types
-	 * throughout init, so an answer cached early would miss them.
+	 * Post types we stripped support from ourselves are added back before the
+	 * exclusion list is applied. Without that, this method would stop
+	 * recognising a post type the moment remove_default_editor() ran, and
+	 * every later consumer in the same request would see an empty list. That
+	 * is not hypothetical: edit-form-advanced.php fires add_meta_boxes at line
+	 * 264 and admin_enqueue_scripts at line 418, so the editor screen enqueued
+	 * no assets at all.
+	 *
+	 * Deliberately not memoized instead, because plugins and themes register
+	 * post types throughout init and an answer cached early would miss them.
 	 *
 	 * @return string[] Eligible post type names, reindexed.
 	 */
 	public function eligible(): array {
 		$supporting = array_values(get_post_types_by_support('editor'));
+
+		foreach ($this->stripped as $post_type) {
+			if (!in_array($post_type, $supporting, true)) {
+				$supporting[] = $post_type;
+			}
+		}
 
 		/**
 		 * Filter the post types that never receive the Markdown editor.
@@ -82,6 +103,8 @@ class Ozhmd_Post_Types {
 		if (!in_array($post_type, $this->eligible(), true)) {
 			return;
 		}
+
+		$this->stripped[] = $post_type;
 
 		remove_post_type_support($post_type, 'editor');
 	}
