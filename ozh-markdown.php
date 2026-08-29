@@ -32,6 +32,7 @@ require_once OZHMD_DIR . 'includes/class-ozhmd-post-types.php';
 require_once OZHMD_DIR . 'includes/class-ozhmd-post-storage.php';
 require_once OZHMD_DIR . 'includes/class-ozhmd-editor-ui.php';
 require_once OZHMD_DIR . 'includes/class-ozhmd-settings.php';
+require_once OZHMD_DIR . 'includes/class-ozhmd-frontend.php';
 
 /**
  * Construct the plugin services and register their hooks.
@@ -57,6 +58,9 @@ function ozhmd_bootstrap(): void {
 
 	$editor_ui = new Ozhmd_Editor_UI($post_types, $storage, $settings);
 	$editor_ui->register_hooks();
+
+	$frontend = new Ozhmd_Frontend($settings);
+	$frontend->register_hooks();
 
 	/**
 	 * Expose the converter to code loaded later in the build.

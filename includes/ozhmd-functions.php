@@ -188,3 +188,29 @@ function ozhmd_sanitize_options(array $input, array $defaults): array {
 
 	return $clean;
 }
+
+/**
+ * Prism languages bundled in assets/js/vendor/prism.js.
+ *
+ * Kept in step with PRISM_LANGUAGES in tools/fetch-vendor.sh by hand. The
+ * bundle is built at vendoring time, so this list is a description of what
+ * shipped rather than something consulted at runtime.
+ *
+ * @return string[] Language identifiers.
+ */
+function ozhmd_prism_languages(): array {
+	return [
+		'markup',
+		'css',
+		'clike',
+		'javascript',
+		'php',
+		'bash',
+		'sql',
+		'json',
+		'yaml',
+		'diff',
+		'markdown',
+		'ini',
+	];
+}
