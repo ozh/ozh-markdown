@@ -40,6 +40,49 @@ final class ConverterTest extends TestCase {
 	}
 
 	/**
+	 * The trusted converter passes an iframe embed through unescaped, since
+	 * GithubFlavoredMarkdownExtension would otherwise escape it despite
+	 * html_input => 'allow'.
+	 *
+	 * @return void
+	 */
+	public function test_trusted_converter_passes_iframe_embeds_through(): void {
+		$html = (string) $this->factory->create_trusted()->convert('<iframe src="https://www.youtube.com/embed/x"></iframe>');
+
+		$this->assertStringContainsString('<iframe src="https://www.youtube.com/embed/x"></iframe>', $html);
+	}
+
+	/**
+	 * The trusted converter passes a script embed through unescaped, since
+	 * GithubFlavoredMarkdownExtension would otherwise escape it despite
+	 * html_input => 'allow'.
+	 *
+	 * @return void
+	 */
+	public function test_trusted_converter_passes_script_embeds_through(): void {
+		$html = (string) $this->factory->create_trusted()->convert('<script src="https://gist.github.com/x.js"></script>');
+
+		$this->assertStringContainsString('<script src="https://gist.github.com/x.js"></script>', $html);
+	}
+
+	/**
+	 * The untrusted converter still strips iframe and script tags, proving the
+	 * trusted converter's emptied disallowed list is not shared configuration.
+	 *
+	 * @return void
+	 */
+	public function test_untrusted_converter_still_strips_iframe_and_script_tags(): void {
+		$html = (string) $this->factory->create_untrusted()->convert(
+			'<iframe src="https://www.youtube.com/embed/x"></iframe><script src="https://gist.github.com/x.js"></script>'
+		);
+
+		// html_input => strip removes the tags and keeps their text, which is
+		// safe. Assert on the tag, not on the absence of any text it contained.
+		$this->assertStringNotContainsString('<iframe', $html);
+		$this->assertStringNotContainsString('<script', $html);
+	}
+
+	/**
 	 * The trusted converter renders GFM tables.
 	 *
 	 * @return void

@@ -119,6 +119,9 @@ Two instances, distinctly configured, never one instance with runtime flags. The
 
 - `html_input => 'allow'`, `allow_unsafe_links => true`
 - CommonMark core plus the GitHub Flavored Markdown extension
+- `disallowed_raw_html => ['disallowed_tags' => []]`
+
+That last line is load-bearing and easy to miss. `GithubFlavoredMarkdownExtension` bundles `DisallowedRawHtmlExtension`, which rewrites `script`, `iframe`, `style`, `title`, `textarea`, `xmp`, `noembed`, `noframes` and `plaintext` to escaped text **regardless of `html_input`**. Without emptying that list, `html_input => 'allow'` is a lie on the trusted path: a legacy post's YouTube embed or gist script becomes visible escaped markup on conversion. Emptying it applies to the trusted converter only.
 
 **Untrusted (comments)**
 
@@ -228,6 +231,7 @@ Probed against the real libraries on PHP 8.5 during planning, and therefore safe
 | Input | Converter | Output |
 |---|---|---|
 | `<div class="x">hi</div>` | trusted | passes through unchanged |
+| `<iframe src="...">`, `<script src="...">` | trusted | pass through unchanged, but **only** with `disallowed_raw_html` emptied as above |
 | `hi <script>alert(1)</script> there` | untrusted | `<p>hi alert(1) there</p>` |
 | `[a](https://e.com/x)` | untrusted | `<a rel="nofollow ugc" href="https://e.com/x">a</a>` |
 | `[a](javascript:alert(1))` | untrusted | `<a rel="nofollow ugc">a</a>`, href dropped entirely |
