@@ -29,6 +29,8 @@ require_once OZHMD_DIR . 'includes/ozhmd-functions.php';
 require_once OZHMD_DIR . 'includes/class-ozhmd-converter-factory.php';
 require_once OZHMD_DIR . 'includes/class-ozhmd-converter.php';
 require_once OZHMD_DIR . 'includes/class-ozhmd-post-types.php';
+require_once OZHMD_DIR . 'includes/class-ozhmd-post-storage.php';
+require_once OZHMD_DIR . 'includes/class-ozhmd-editor-ui.php';
 require_once OZHMD_DIR . 'includes/class-ozhmd-settings.php';
 
 /**
@@ -45,9 +47,16 @@ function ozhmd_bootstrap(): void {
 	$converter = new Ozhmd_Converter($factory->create_trusted(), $factory->create_untrusted());
 
 	$post_types = new Ozhmd_Post_Types();
+	$post_types->register_hooks();
+
+	$storage = new Ozhmd_Post_Storage($converter, $post_types);
+	$storage->register_hooks();
 
 	$settings = new Ozhmd_Settings($post_types);
 	$settings->register_hooks();
+
+	$editor_ui = new Ozhmd_Editor_UI($post_types, $storage, $settings);
+	$editor_ui->register_hooks();
 
 	/**
 	 * Expose the converter to code loaded later in the build.

@@ -1,0 +1,117 @@
+/**
+ * Split pane Markdown editor.
+ *
+ * Two equal columns on wide screens, stacked on narrow ones. No !important
+ * anywhere, so an admin colour scheme or a theme can override any of it.
+ */
+
+.ozhmd-editor {
+	display: flex;
+	gap: 1px;
+	background: #dcdcde;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	overflow: hidden;
+}
+
+.ozhmd-pane {
+	flex: 1 1 50%;
+	min-width: 0;
+	background: #fff;
+}
+
+.ozhmd-pane-source {
+	display: flex;
+}
+
+/* No-JavaScript fallback: one full width column, no preview to show. */
+.ozhmd-editor-plain {
+	display: block;
+}
+
+.ozhmd-editor-plain .ozhmd-pane-preview {
+	display: none;
+}
+
+.ozhmd-textarea {
+	width: 100%;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+	font-family: Consolas, Monaco, "Andale Mono", monospace;
+	font-size: 13px;
+	line-height: 1.6;
+	resize: vertical;
+}
+
+.ozhmd-textarea:focus {
+	box-shadow: none;
+	outline: 2px solid #2271b1;
+	outline-offset: -2px;
+}
+
+.ozhmd-preview {
+	padding: 10px 14px;
+	overflow-wrap: break-word;
+	max-height: 80vh;
+	overflow-y: auto;
+}
+
+.ozhmd-preview > :first-child {
+	margin-top: 0;
+}
+
+.ozhmd-preview img {
+	max-width: 100%;
+	height: auto;
+}
+
+.ozhmd-preview pre {
+	overflow-x: auto;
+}
+
+.ozhmd-preview blockquote {
+	margin-left: 0;
+	padding-left: 1em;
+	border-left: 4px solid #dcdcde;
+	color: #50575e;
+}
+
+.ozhmd-preview table {
+	border-collapse: collapse;
+}
+
+.ozhmd-preview th,
+.ozhmd-preview td {
+	border: 1px solid #dcdcde;
+	padding: 4px 8px;
+}
+
+.ozhmd-legacy {
+	margin: 0 0 12px;
+}
+
+/* CodeMirror fills its pane rather than sizing to its content. */
+.ozhmd-editor .CodeMirror {
+	height: auto;
+	min-height: 400px;
+	width: 100%;
+	font-family: Consolas, Monaco, "Andale Mono", monospace;
+	font-size: 13px;
+	line-height: 1.6;
+}
+
+.ozhmd-editor .CodeMirror-scroll {
+	min-height: 400px;
+	max-height: 80vh;
+}
+
+@media screen and (max-width: 850px) {
+	.ozhmd-editor {
+		flex-direction: column;
+	}
+
+	.ozhmd-preview {
+		max-height: 40vh;
+	}
+}
