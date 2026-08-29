@@ -78,60 +78,6 @@ function ozhmd_content_has_code_block(string $html): bool {
 }
 
 /**
- * Tell whether a class token is a Prism language class.
- *
- * Anchored with \z rather than $, because $ also matches immediately before a
- * trailing newline, which would let a crafted value through.
- *
- * @param string $class Single class token, already split on whitespace.
- * @return bool True when the token matches language-<slug>.
- */
-function ozhmd_is_valid_language_class(string $class): bool {
-	return 1 === preg_match('/\A language- [a-z0-9+-]+ \z/x', $class);
-}
-
-/**
- * Strip every class token that is not a language class from <pre> and <code>.
- *
- * Belt and braces: the untrusted converter already strips raw HTML, so the only
- * class attributes reaching this function are ones CommonMark generated from
- * fence info strings. It runs anyway, because KSES can allow an attribute but
- * cannot pattern-match its value.
- *
- * The tag matcher is quote aware. A naive [^>]* stops at the first > in the
- * string, including one inside a quoted attribute value, which would leave the
- * rest of the tag unexamined.
- *
- * If the regex engine fails, the original HTML is returned unfiltered. That is
- * deliberate: this pass is the middle of three layers, and KSES runs after it.
- *
- * @param string $html HTML to filter.
- * @return string HTML with only language-* classes left on pre and code tags.
- */
-function ozhmd_filter_language_classes(string $html): string {
-	$filtered = preg_replace_callback(
-		'#<(pre|code)\b((?:"[^"]*"|\'[^\']*\'|[^>"\'])*)>#i',
-		static function (array $tag_match): string {
-			$attributes = preg_replace_callback(
-				'/(?<![\w-])class\s*=\s*(["\'])(.*?)\1/is',
-				static function (array $class_match): string {
-					$tokens = preg_split('/\s+/', trim($class_match[2]), -1, PREG_SPLIT_NO_EMPTY);
-					$kept   = array_filter($tokens ?: [], 'ozhmd_is_valid_language_class');
-
-					return [] === $kept ? '' : 'class="' . implode(' ', $kept) . '"';
-				},
-				$tag_match[2]
-			);
-
-			return '<' . $tag_match[1] . rtrim((string) $attributes) . '>';
-		},
-		$html
-	);
-
-	return null === $filtered ? $html : $filtered;
-}
-
-/**
  * Editing state of a post, derived from its stored Markdown.
  *
  * A post with no _ozhmd_markdown meta is legacy and must never have its

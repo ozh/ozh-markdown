@@ -142,7 +142,7 @@ class Ozhmd_Post_Storage {
 			return;
 		}
 
-		$this->update_content($post_id, $this->converter->to_html_trusted((string) $markdown));
+		$this->update_content($post_id, $this->converter->to_html((string) $markdown));
 	}
 
 	/**

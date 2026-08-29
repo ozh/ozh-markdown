@@ -44,7 +44,7 @@ require_once OZHMD_DIR . 'includes/class-ozhmd-settings.php';
  */
 function ozhmd_bootstrap(): void {
 	$factory   = new Ozhmd_Converter_Factory();
-	$converter = new Ozhmd_Converter($factory->create_trusted(), $factory->create_untrusted());
+	$converter = new Ozhmd_Converter($factory->create());
 
 	$post_types = new Ozhmd_Post_Types();
 	$post_types->register_hooks();

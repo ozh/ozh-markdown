@@ -1,6 +1,6 @@
 <?php
 /**
- * Holds the two converter instances and exposes them by trust level.
+ * Holds the Markdown converter used for post content.
  */
 
 use League\CommonMark\ConverterInterface;
@@ -8,8 +8,13 @@ use League\CommonMark\ConverterInterface;
 /**
  * Markdown conversion entry point.
  *
- * Carries no configuration of its own: both instances are injected, so tests
- * can substitute fakes and no caller can reconfigure a converter at runtime.
+ * Carries no configuration of its own: the converter is injected, so tests can
+ * substitute a fake and no caller can reconfigure it at runtime.
+ *
+ * There is deliberately only one converter. An earlier design had a second,
+ * hardened instance for untrusted comment input, but comments are out of scope,
+ * so shipping a second configuration that nothing calls would be dead code
+ * standing in for a security boundary that no longer exists.
  */
 class Ozhmd_Converter {
 
@@ -18,43 +23,29 @@ class Ozhmd_Converter {
 	 *
 	 * @var ConverterInterface
 	 */
-	private ConverterInterface $trusted;
+	private ConverterInterface $converter;
 
 	/**
-	 * Converter stripping raw HTML, used for comment content.
+	 * Store the injected converter.
 	 *
-	 * @var ConverterInterface
+	 * @param ConverterInterface $converter Converter for post content.
 	 */
-	private ConverterInterface $untrusted;
-
-	/**
-	 * Store the injected converters.
-	 *
-	 * @param ConverterInterface $trusted   Converter for trusted input.
-	 * @param ConverterInterface $untrusted Converter for untrusted input.
-	 */
-	public function __construct(ConverterInterface $trusted, ConverterInterface $untrusted) {
-		$this->trusted   = $trusted;
-		$this->untrusted = $untrusted;
+	public function __construct(ConverterInterface $converter) {
+		$this->converter = $converter;
 	}
 
 	/**
-	 * Convert Markdown written by a trusted author.
+	 * Convert post Markdown into HTML.
+	 *
+	 * Post content is authored by logged in users, so raw HTML passes through.
+	 * WordPress KSES still decides who may store it: the save path writes
+	 * through wp_update_post(), which runs content_save_pre for any user
+	 * lacking the unfiltered_html capability.
 	 *
 	 * @param string $markdown Raw Markdown.
 	 * @return string Rendered HTML.
 	 */
-	public function to_html_trusted(string $markdown): string {
-		return (string) $this->trusted->convert($markdown);
-	}
-
-	/**
-	 * Convert Markdown written by an untrusted author.
-	 *
-	 * @param string $markdown Raw Markdown.
-	 * @return string Rendered HTML.
-	 */
-	public function to_html_untrusted(string $markdown): string {
-		return (string) $this->untrusted->convert($markdown);
+	public function to_html(string $markdown): string {
+		return (string) $this->converter->convert($markdown);
 	}
 }

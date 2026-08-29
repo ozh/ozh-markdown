@@ -25,7 +25,7 @@ final class PostStorageTest extends Ozhmd_Integration_Test_Case {
 		parent::setUp();
 
 		$factory   = new Ozhmd_Converter_Factory();
-		$converter = new Ozhmd_Converter($factory->create_trusted(), $factory->create_untrusted());
+		$converter = new Ozhmd_Converter($factory->create());
 
 		$this->storage = new Ozhmd_Post_Storage($converter, new Ozhmd_Post_Types());
 	}
