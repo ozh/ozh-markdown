@@ -115,14 +115,20 @@ final class BootstrapTest extends Ozhmd_Integration_Test_Case {
 	 */
 	#[Depends('test_isolation_a_post_is_created')]
 	public function test_isolation_the_post_does_not_leak_into_the_next_test(): void {
-		$posts = get_posts([
+		// Asserts on the specific title the setup half used, rather than
+		// counting every post in the database. A total count also fails when
+		// unrelated rows exist, for instance after a scratch script has been
+		// run against the test database, which is a false alarm rather than a
+		// rollback regression.
+		$leaked = get_posts([
 			'post_type'   => 'post',
 			'post_status' => 'any',
 			'numberposts' => -1,
 			'fields'      => 'ids',
+			'title'       => 'Isolation Proof Post',
 		]);
 
-		$this->assertCount(1, $posts, 'Only the stock Hello World post should exist.');
+		$this->assertSame([], $leaked, 'The post created by the setup half survived the rollback.');
 	}
 
 	/**
