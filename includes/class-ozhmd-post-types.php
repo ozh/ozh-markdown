@@ -42,6 +42,9 @@ class Ozhmd_Post_Types {
 	 */
 	public function register_hooks(): void {
 		add_filter('use_block_editor_for_post_type', [$this, 'disable_block_editor'], 10, 2);
+
+		// Priority 20, so the editor meta box has already registered at 10 and
+		// resolved eligibility while 'editor' support is still present.
 		add_action('add_meta_boxes', [$this, 'remove_default_editor'], 20, 2);
 	}
 
@@ -57,13 +60,19 @@ class Ozhmd_Post_Types {
 	}
 
 	/**
-	 * Take the TinyMCE content box off the edit screen.
+	 * Take the classic editor off the edit screen.
 	 *
-	 * Deliberately removes the meta box rather than calling
-	 * remove_post_type_support(). Dropping 'editor' support would mutate a
-	 * global registry that eligible() itself reads, and would also strip
-	 * post_content from REST responses, which the REST save path needs.
-	 * Removing the box is scoped to the screen being rendered.
+	 * The content editor is not a meta box: wp-admin/edit-form-advanced.php
+	 * renders <div id="postdivrich"> inline, guarded by post_type_supports().
+	 * remove_meta_box() therefore does nothing, and dropping the support is
+	 * the only thing that works.
+	 *
+	 * Support is dropped here, on add_meta_boxes, rather than on init. The
+	 * hook fires from register_and_do_post_meta_boxes() before the editor is
+	 * rendered further down the same template, so the classic editor
+	 * disappears while eligible() still sees an intact registry everywhere
+	 * else, including on the REST and save_post requests that need
+	 * post_content to stay supported.
 	 *
 	 * @param string       $post_type Post type of the screen being built.
 	 * @param WP_Post|null $post      Post being edited, unused.
@@ -74,6 +83,6 @@ class Ozhmd_Post_Types {
 			return;
 		}
 
-		remove_meta_box('postdivrich', $post_type, 'normal');
+		remove_post_type_support($post_type, 'editor');
 	}
 }

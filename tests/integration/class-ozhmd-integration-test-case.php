@@ -148,5 +148,12 @@ abstract class Ozhmd_Integration_Test_Case extends TestCase {
 	 */
 	protected function require_admin_includes(): void {
 		require_once ABSPATH . 'wp-admin/includes/template.php';
+		require_once ABSPATH . 'wp-admin/includes/post.php';
+		require_once ABSPATH . 'wp-admin/includes/media.php';
+
+		// add_meta_box() resolves its screen argument through
+		// convert_to_screen(), which needs both of these.
+		require_once ABSPATH . 'wp-admin/includes/class-wp-screen.php';
+		require_once ABSPATH . 'wp-admin/includes/screen.php';
 	}
 }

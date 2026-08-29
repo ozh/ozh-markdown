@@ -92,6 +92,9 @@ class Ozhmd_Editor_UI {
 		}
 
 		echo '<div class="ozhmd-upload-errors" data-ozhmd-errors></div>';
+
+		$this->render_toolbar();
+
 		echo '<div class="ozhmd-editor" data-ozhmd-editor>';
 
 		echo '<div class="ozhmd-pane ozhmd-pane-source">';
@@ -103,6 +106,66 @@ class Ozhmd_Editor_UI {
 
 		echo '<div class="ozhmd-pane ozhmd-pane-preview">';
 		echo '<div class="ozhmd-preview" data-ozhmd-preview></div>';
+		echo '</div>';
+
+		echo '</div>';
+	}
+
+	/**
+	 * Formatting buttons offered above the editor.
+	 *
+	 * Each entry names the action the JavaScript performs, the dashicon to
+	 * draw, and the label used for both the tooltip and the accessible name.
+	 * Keyboard shortcuts are advertised in the tooltip where one exists.
+	 *
+	 * @return array<int, array<string, string>> Button definitions.
+	 */
+	public function toolbar_buttons(): array {
+		return [
+			['action' => 'heading', 'icon' => 'editor-textcolor', 'label' => __('Heading', 'ozh-markdown'), 'key' => ''],
+			['action' => 'bold', 'icon' => 'editor-bold', 'label' => __('Bold', 'ozh-markdown'), 'key' => 'Ctrl+B'],
+			['action' => 'italic', 'icon' => 'editor-italic', 'label' => __('Italic', 'ozh-markdown'), 'key' => 'Ctrl+I'],
+			['action' => 'quote', 'icon' => 'editor-quote', 'label' => __('Quote', 'ozh-markdown'), 'key' => ''],
+			['action' => 'code', 'icon' => 'editor-code', 'label' => __('Code', 'ozh-markdown'), 'key' => ''],
+			['action' => 'link', 'icon' => 'admin-links', 'label' => __('Link', 'ozh-markdown'), 'key' => 'Ctrl+K'],
+			['action' => 'ol', 'icon' => 'editor-ol', 'label' => __('Numbered list', 'ozh-markdown'), 'key' => ''],
+			['action' => 'ul', 'icon' => 'editor-ul', 'label' => __('Bulleted list', 'ozh-markdown'), 'key' => ''],
+			['action' => 'task', 'icon' => 'yes', 'label' => __('Task list', 'ozh-markdown'), 'key' => ''],
+			['action' => 'table', 'icon' => 'grid-view', 'label' => __('Table', 'ozh-markdown'), 'key' => ''],
+		];
+	}
+
+	/**
+	 * Render the formatting toolbar and the Add Media button.
+	 *
+	 * @return void
+	 */
+	private function render_toolbar(): void {
+		echo '<div class="ozhmd-toolbar" data-ozhmd-toolbar>';
+
+		echo '<div class="ozhmd-toolbar-group">';
+
+		foreach ($this->toolbar_buttons() as $button) {
+			$title = '' === $button['key']
+				? $button['label']
+				: $button['label'] . ' (' . $button['key'] . ')';
+
+			printf(
+				'<button type="button" class="button ozhmd-tool" data-ozhmd-action="%1$s" title="%2$s" aria-label="%2$s"><span class="dashicons dashicons-%3$s" aria-hidden="true"></span></button>',
+				esc_attr($button['action']),
+				esc_attr($title),
+				esc_attr($button['icon'])
+			);
+		}
+
+		echo '</div>';
+
+		echo '<div class="ozhmd-toolbar-group ozhmd-toolbar-media">';
+
+		// The classic editor is gone, so the media button is rendered here.
+		// Passing our textarea id makes send_to_editor target it.
+		do_action('media_buttons', 'ozhmd-markdown');
+
 		echo '</div>';
 
 		echo '</div>';
@@ -139,6 +202,11 @@ class Ozhmd_Editor_UI {
 			return;
 		}
 
+		// The classic editor is removed, so its media modal has to be loaded
+		// explicitly for the Add Media button to work.
+		wp_enqueue_media(['post' => get_the_ID()]);
+
+		wp_enqueue_style('dashicons');
 		wp_enqueue_style('ozhmd-codemirror', OZHMD_URL . 'assets/css/vendor/codemirror.css', [], OZHMD_VERSION);
 		wp_enqueue_style('ozhmd-prism', OZHMD_URL . 'assets/css/vendor/prism.css', [], OZHMD_VERSION);
 		wp_enqueue_style('ozhmd-editor', OZHMD_URL . 'assets/css/editor.css', ['ozhmd-codemirror'], OZHMD_VERSION);
@@ -159,6 +227,22 @@ class Ozhmd_Editor_UI {
 		wp_localize_script('ozhmd-editor', 'ozhmdEditor', [
 			'lineNumbers' => $this->settings->option('prism_line_numbers'),
 		]);
+
+		wp_enqueue_script(
+			'ozhmd-toolbar-lib',
+			OZHMD_URL . 'assets/js/lib/ozhmd-toolbar-lib.js',
+			[],
+			OZHMD_VERSION,
+			true
+		);
+
+		wp_enqueue_script(
+			'ozhmd-toolbar',
+			OZHMD_URL . 'assets/js/toolbar.js',
+			['ozhmd-toolbar-lib', 'ozhmd-editor'],
+			OZHMD_VERSION,
+			true
+		);
 
 		wp_enqueue_script(
 			'ozhmd-upload-lib',
