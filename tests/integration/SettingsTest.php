@@ -179,9 +179,8 @@ final class SettingsTest extends Ozhmd_Integration_Test_Case {
 	public function test_the_page_renders_a_field_for_every_toggle(): void {
 		// register_settings() and render_page() reach add_settings_section(),
 		// do_settings_sections() and submit_button(), none of which a
-		// front-end WordPress boot loads. This test loads them itself, same
-		// as BootstrapTest::test_isolation_a_meta_box_is_registered().
-		require_once ABSPATH . 'wp-admin/includes/template.php';
+		// front-end WordPress boot loads.
+		$this->require_admin_includes();
 
 		$this->login_as_administrator();
 		$this->settings->register_settings();
@@ -203,7 +202,7 @@ final class SettingsTest extends Ozhmd_Integration_Test_Case {
 	 */
 	public function test_the_page_lists_the_handled_post_types(): void {
 		// Same admin-only dependency as test_the_page_renders_a_field_for_every_toggle.
-		require_once ABSPATH . 'wp-admin/includes/template.php';
+		$this->require_admin_includes();
 
 		$this->login_as_administrator();
 		$this->settings->register_settings();

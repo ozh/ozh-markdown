@@ -90,7 +90,7 @@ final class BootstrapTest extends Ozhmd_Integration_Test_Case {
 	}
 
 	/**
-	 * ISOLATION PROOF (1 of 5, setup half): create a post that must not
+	 * ISOLATION PROOF (1 of 6, setup half): create a post that must not
 	 * survive teardown, relying on declaration order to run before its
 	 * companion assertion below.
 	 *
@@ -108,7 +108,7 @@ final class BootstrapTest extends Ozhmd_Integration_Test_Case {
 	}
 
 	/**
-	 * ISOLATION PROOF (1 of 5, assertion half): the post created by the
+	 * ISOLATION PROOF (1 of 6, assertion half): the post created by the
 	 * previous test must be gone, proving the transaction rollback works.
 	 *
 	 * @return void
@@ -126,7 +126,7 @@ final class BootstrapTest extends Ozhmd_Integration_Test_Case {
 	}
 
 	/**
-	 * ISOLATION PROOF (2 of 5, setup half): add a filter that must not
+	 * ISOLATION PROOF (2 of 6, setup half): add a filter that must not
 	 * survive teardown.
 	 *
 	 * @return void
@@ -138,7 +138,7 @@ final class BootstrapTest extends Ozhmd_Integration_Test_Case {
 	}
 
 	/**
-	 * ISOLATION PROOF (2 of 5, assertion half): the filter added by the
+	 * ISOLATION PROOF (2 of 6, assertion half): the filter added by the
 	 * previous test must be gone, proving the $wp_filter restore works.
 	 *
 	 * @return void
@@ -149,7 +149,7 @@ final class BootstrapTest extends Ozhmd_Integration_Test_Case {
 	}
 
 	/**
-	 * ISOLATION PROOF (3 of 5, setup half): register a post type that must
+	 * ISOLATION PROOF (3 of 6, setup half): register a post type that must
 	 * not survive teardown.
 	 *
 	 * @return void
@@ -161,7 +161,7 @@ final class BootstrapTest extends Ozhmd_Integration_Test_Case {
 	}
 
 	/**
-	 * ISOLATION PROOF (3 of 5, assertion half): the post type registered by
+	 * ISOLATION PROOF (3 of 6, assertion half): the post type registered by
 	 * the previous test must be gone from $wp_post_types, proving the
 	 * $wp_post_types restore works.
 	 *
@@ -173,7 +173,7 @@ final class BootstrapTest extends Ozhmd_Integration_Test_Case {
 	}
 
 	/**
-	 * ISOLATION PROOF (4 of 5, setup half): register a post type that
+	 * ISOLATION PROOF (4 of 6, setup half): register a post type that
 	 * supports the editor feature, read through the separate feature index
 	 * rather than $wp_post_types.
 	 *
@@ -186,7 +186,7 @@ final class BootstrapTest extends Ozhmd_Integration_Test_Case {
 	}
 
 	/**
-	 * ISOLATION PROOF (4 of 5, assertion half): the post type registered by
+	 * ISOLATION PROOF (4 of 6, assertion half): the post type registered by
 	 * the previous test must be gone from $_wp_post_type_features, proving
 	 * that separate registry is restored too, not just $wp_post_types.
 	 *
@@ -198,14 +198,14 @@ final class BootstrapTest extends Ozhmd_Integration_Test_Case {
 	}
 
 	/**
-	 * ISOLATION PROOF (5 of 5, setup half): register a meta box that must
+	 * ISOLATION PROOF (5 of 6, setup half): register a meta box that must
 	 * not survive teardown. The admin-only functions this needs are not
 	 * loaded by a front-end WordPress boot, so this test loads them itself.
 	 *
 	 * @return void
 	 */
 	public function test_isolation_a_meta_box_is_registered(): void {
-		require_once ABSPATH . 'wp-admin/includes/template.php';
+		$this->require_admin_includes();
 		require_once ABSPATH . 'wp-admin/includes/screen.php';
 		require_once ABSPATH . 'wp-admin/includes/class-wp-screen.php';
 
@@ -218,7 +218,7 @@ final class BootstrapTest extends Ozhmd_Integration_Test_Case {
 	}
 
 	/**
-	 * ISOLATION PROOF (5 of 5, assertion half): the meta box registered by
+	 * ISOLATION PROOF (5 of 6, assertion half): the meta box registered by
 	 * the previous test must be gone, proving the $wp_meta_boxes restore
 	 * works.
 	 *
@@ -229,5 +229,39 @@ final class BootstrapTest extends Ozhmd_Integration_Test_Case {
 		global $wp_meta_boxes;
 
 		$this->assertArrayNotHasKey('ozhmd_isolation_meta_box', $wp_meta_boxes['post']['normal']['default'] ?? []);
+	}
+
+	/**
+	 * ISOLATION PROOF (6 of 6, setup half): log in as an administrator that
+	 * must not survive teardown. wp_set_current_user() caches allcaps on a
+	 * WP_User in $GLOBALS['current_user'], which nothing restores unless the
+	 * base test case does it explicitly.
+	 *
+	 * @return void
+	 */
+	public function test_isolation_a_user_is_logged_in(): void {
+		$user_id = wp_insert_user([
+			'user_login' => 'ozhmd_isolation_admin_' . uniqid(),
+			'user_pass'  => 'password',
+			'user_email' => uniqid() . '@example.org',
+			'role'       => 'administrator',
+		]);
+
+		wp_set_current_user($user_id);
+
+		$this->assertTrue(current_user_can('manage_options'));
+	}
+
+	/**
+	 * ISOLATION PROOF (6 of 6, assertion half): the login from the previous
+	 * test must be gone, proving the current user restore works even though
+	 * the administrator's database row has already been rolled back.
+	 *
+	 * @return void
+	 */
+	#[Depends('test_isolation_a_user_is_logged_in')]
+	public function test_isolation_the_logged_in_user_does_not_leak_into_the_next_test(): void {
+		$this->assertSame(0, get_current_user_id());
+		$this->assertFalse(current_user_can('manage_options'));
 	}
 }

@@ -11,6 +11,15 @@
  * Hardcodes local container paths and a root login with an empty password.
  * That is intentional for this dev-only stack; the file carries no
  * production secret.
+ *
+ * WP_CONTENT_DIR is deliberately left undefined here, which lets it default
+ * to the live blog's wp-content tree under ABSPATH, so theme and plugin
+ * resolution works exactly as in production. This means wp_upload_dir()
+ * would otherwise resolve to the live blog's real wp-content/uploads.
+ * Anything a test writes to disk, such as an uploaded attachment, must be
+ * redirected away from the live tree; see
+ * Ozhmd_Integration_Test_Case::ozhmd_redirect_uploads_to_scratch_dir(),
+ * which is wired up in setUp() for every test.
  */
 
 define('ABSPATH', '/var/www/html/planetozh.com/blog/');
