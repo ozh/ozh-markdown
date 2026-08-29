@@ -115,3 +115,17 @@
 		max-height: 40vh;
 	}
 }
+
+.ozhmd-upload-errors:empty {
+	display: none;
+}
+
+.ozhmd-upload-error {
+	margin: 0 0 8px;
+}
+
+/* Visible target while a file is being dragged over the editor. */
+.ozhmd-editor.ozhmd-dragging {
+	outline: 2px dashed #2271b1;
+	outline-offset: -2px;
+}

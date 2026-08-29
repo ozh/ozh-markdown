@@ -91,6 +91,7 @@ class Ozhmd_Editor_UI {
 			$this->render_legacy_notice();
 		}
 
+		echo '<div class="ozhmd-upload-errors" data-ozhmd-errors></div>';
 		echo '<div class="ozhmd-editor" data-ozhmd-editor>';
 
 		echo '<div class="ozhmd-pane ozhmd-pane-source">';
@@ -157,6 +158,32 @@ class Ozhmd_Editor_UI {
 
 		wp_localize_script('ozhmd-editor', 'ozhmdEditor', [
 			'lineNumbers' => $this->settings->option('prism_line_numbers'),
+		]);
+
+		wp_enqueue_script(
+			'ozhmd-upload-lib',
+			OZHMD_URL . 'assets/js/lib/ozhmd-upload-lib.js',
+			[],
+			OZHMD_VERSION,
+			true
+		);
+
+		wp_enqueue_script(
+			'ozhmd-upload',
+			OZHMD_URL . 'assets/js/upload.js',
+			['ozhmd-upload-lib', 'ozhmd-editor'],
+			OZHMD_VERSION,
+			true
+		);
+
+		wp_localize_script('ozhmd-upload', 'ozhmdUpload', [
+			'endpoint' => rest_url(Ozhmd_Uploader::NAMESPACE . Ozhmd_Uploader::ROUTE),
+			'nonce'    => wp_create_nonce('wp_rest'),
+			'postId'   => (int) get_the_ID(),
+			'i18n'     => [
+				'notAnImage'   => __('is not an image, so it was not uploaded.', 'ozh-markdown'),
+				'uploadFailed' => __('The upload failed.', 'ozh-markdown'),
+			],
 		]);
 	}
 }

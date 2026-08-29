@@ -77,6 +77,10 @@
 			viewportMargin: Infinity
 		});
 
+		// Published so upload.js can insert at the cursor through the same
+		// instance, keeping undo history and cursor position intact.
+		window.ozhmdCodeMirror = editor;
+
 		var update = debounce(function () {
 			renderPreview(editor.getValue(), preview);
 		}, DEBOUNCE_MS);
