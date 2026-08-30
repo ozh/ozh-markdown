@@ -82,7 +82,7 @@ class Ozhmd_Editor_UI {
 	 */
 	public function render(WP_Post $post): void {
 		$markdown = $this->storage->stored_markdown($post->ID);
-		$state    = ozhmd_post_state($markdown);
+		$state    = ozhmd_post_state($markdown, $post->post_content);
 		$value    = 'legacy' === $state ? $post->post_content : (string) $markdown;
 
 		wp_nonce_field('ozhmd_save_' . $post->ID, 'ozhmd_nonce');

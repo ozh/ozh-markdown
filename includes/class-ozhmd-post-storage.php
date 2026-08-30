@@ -108,7 +108,7 @@ class Ozhmd_Post_Storage {
 		// A legacy post stays legacy until it is explicitly converted, so the
 		// submitted text is stored as post_content verbatim rather than being
 		// promoted to Markdown behind the author's back.
-		if ('legacy' === ozhmd_post_state($this->stored_markdown($post_id)) && !isset($_POST['ozhmd_convert'])) {
+		if ('legacy' === ozhmd_post_state($this->stored_markdown($post_id), $post->post_content) && !isset($_POST['ozhmd_convert'])) {
 			$this->update_content($post_id, $markdown);
 
 			return;
@@ -138,7 +138,7 @@ class Ozhmd_Post_Storage {
 
 		$markdown = $this->stored_markdown($post_id);
 
-		if ('legacy' === ozhmd_post_state($markdown)) {
+		if ('legacy' === ozhmd_post_state($markdown, $post->post_content)) {
 			return;
 		}
 

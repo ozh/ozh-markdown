@@ -78,17 +78,29 @@ function ozhmd_content_has_code_block(string $html): bool {
 }
 
 /**
- * Editing state of a post, derived from its stored Markdown.
+ * Editing state of a post.
  *
- * A post with no _ozhmd_markdown meta is legacy and must never have its
- * post_content rewritten. An empty string is not the same as a missing key: it
- * means a converted post whose body was emptied.
+ * A post is legacy only when it has no stored Markdown AND already has
+ * content, which is the case the passthrough rule exists to protect: HTML
+ * written before this plugin, which must never be rewritten silently.
  *
- * @param string|null $markdown Value of the _ozhmd_markdown meta, null when absent.
+ * A post with no stored Markdown and no content is simply new, so it is a
+ * Markdown post from the start. Treating it as legacy would store the author's
+ * Markdown verbatim as HTML and make every new post require an opt in.
+ *
+ * A stored empty string is not the same as a missing key: it means a Markdown
+ * post whose body was emptied.
+ *
+ * @param string|null $markdown     Value of the _ozhmd_markdown meta, null when absent.
+ * @param string      $post_content Existing post_content, used only when the meta is absent.
  * @return string Either 'legacy' or 'markdown'.
  */
-function ozhmd_post_state(?string $markdown): string {
-	return null === $markdown ? 'legacy' : 'markdown';
+function ozhmd_post_state(?string $markdown, string $post_content = ''): string {
+	if (null !== $markdown) {
+		return 'markdown';
+	}
+
+	return '' === trim($post_content) ? 'markdown' : 'legacy';
 }
 
 /**

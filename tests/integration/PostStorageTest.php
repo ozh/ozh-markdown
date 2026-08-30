@@ -31,6 +31,24 @@ final class PostStorageTest extends Ozhmd_Integration_Test_Case {
 	}
 
 	/**
+	 * Create an administrator and make them the current user.
+	 *
+	 * @return int New user ID.
+	 */
+	private function login_as_administrator(): int {
+		$user_id = (int) wp_insert_user([
+			'user_login' => 'ozhmd_admin_' . uniqid(),
+			'user_pass'  => 'password',
+			'user_email' => uniqid() . '@example.org',
+			'role'       => 'administrator',
+		]);
+
+		wp_set_current_user($user_id);
+
+		return $user_id;
+	}
+
+	/**
 	 * Create a draft post and return its ID.
 	 *
 	 * @param string $content Initial post_content.
@@ -49,11 +67,87 @@ final class PostStorageTest extends Ozhmd_Integration_Test_Case {
 	 *
 	 * @return void
 	 */
-	public function test_a_post_without_meta_is_legacy(): void {
+	public function test_a_post_without_meta_but_with_content_is_legacy(): void {
 		$post_id = $this->make_post('<p>old html</p>');
 
 		$this->assertNull($this->storage->stored_markdown($post_id));
-		$this->assertSame('legacy', ozhmd_post_state($this->storage->stored_markdown($post_id)));
+		$this->assertSame('legacy', ozhmd_post_state($this->storage->stored_markdown($post_id), '<p>old html</p>'));
+	}
+
+	/**
+	 * A brand new post converts on save without any opt in.
+	 *
+	 * @return void
+	 */
+	public function test_a_brand_new_post_converts_without_opting_in(): void {
+		$this->login_as_administrator();
+
+		$post_id = $this->make_post();
+
+		$_POST = [
+			'ozhmd_markdown' => "# Hello\n\nSome *emphasis*.",
+			'ozhmd_nonce'    => wp_create_nonce('ozhmd_save_' . $post_id),
+		];
+
+		$this->storage->store_submitted_markdown($post_id, get_post($post_id));
+		$this->storage->convert_to_post_content($post_id, get_post($post_id));
+
+		$_POST = [];
+
+		$this->assertSame("# Hello\n\nSome *emphasis*.", $this->storage->stored_markdown($post_id));
+		$this->assertStringContainsString('<h1>Hello</h1>', get_post($post_id)->post_content);
+	}
+
+	/**
+	 * A legacy post saved without opting in keeps its HTML byte for byte.
+	 *
+	 * @return void
+	 */
+	public function test_a_legacy_post_saved_without_opting_in_is_not_converted(): void {
+		$this->login_as_administrator();
+
+		$original = '<p>Old HTML with some_underscores.</p>';
+		$post_id  = $this->make_post($original);
+
+		$_POST = [
+			'ozhmd_markdown' => $original,
+			'ozhmd_nonce'    => wp_create_nonce('ozhmd_save_' . $post_id),
+		];
+
+		$this->storage->store_submitted_markdown($post_id, get_post($post_id));
+		$this->storage->convert_to_post_content($post_id, get_post($post_id));
+
+		$_POST = [];
+
+		$this->assertNull($this->storage->stored_markdown($post_id), 'No meta means it stayed legacy.');
+		$this->assertSame($original, get_post($post_id)->post_content);
+	}
+
+	/**
+	 * Ticking the convert box backs up the original and converts from then on.
+	 *
+	 * @return void
+	 */
+	public function test_opting_in_backs_up_the_original_and_converts(): void {
+		$this->login_as_administrator();
+
+		$original = '<p>Old HTML.</p>';
+		$post_id  = $this->make_post($original);
+
+		$_POST = [
+			'ozhmd_markdown' => "# Now markdown",
+			'ozhmd_nonce'    => wp_create_nonce('ozhmd_save_' . $post_id),
+			'ozhmd_convert'  => '1',
+		];
+
+		$this->storage->store_submitted_markdown($post_id, get_post($post_id));
+		$this->storage->convert_to_post_content($post_id, get_post($post_id));
+
+		$_POST = [];
+
+		$this->assertSame($original, get_post_meta($post_id, OZHMD_ORIGINAL_META_KEY, true));
+		$this->assertSame('# Now markdown', $this->storage->stored_markdown($post_id));
+		$this->assertStringContainsString('<h1>Now markdown</h1>', get_post($post_id)->post_content);
 	}
 
 	/**
@@ -66,7 +160,7 @@ final class PostStorageTest extends Ozhmd_Integration_Test_Case {
 		update_post_meta($post_id, OZHMD_POST_META_KEY, '');
 
 		$this->assertSame('', $this->storage->stored_markdown($post_id));
-		$this->assertSame('markdown', ozhmd_post_state($this->storage->stored_markdown($post_id)));
+		$this->assertSame('markdown', ozhmd_post_state($this->storage->stored_markdown($post_id), ''));
 	}
 
 	/**
