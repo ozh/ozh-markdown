@@ -227,7 +227,7 @@ class Ozhmd_Editor_UI {
 		);
 
 		wp_localize_script('ozhmd-editor', 'ozhmdEditor', [
-			'lineNumbers' => $this->settings->option('prism_line_numbers'),
+			'preClasses' => ozhmd_prism_pre_classes($this->settings->option('prism_line_numbers')),
 		]);
 
 		wp_enqueue_script(

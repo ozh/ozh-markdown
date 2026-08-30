@@ -214,15 +214,85 @@ function ozhmd_prism_languages(): array {
 	return [
 		'markup',
 		'css',
-		'clike',
 		'javascript',
 		'php',
+		'phpdoc',
 		'bash',
-		'sql',
-		'json',
-		'yaml',
-		'diff',
-		'markdown',
+		'python',
+		'apacheconf',
 		'ini',
+		'git',
+		'json',
+		'perl',
+		'sql',
+		'regex',
 	];
+}
+
+/**
+ * Add marker classes to every <pre> that wraps a code block.
+ *
+ * Prism activates some plugins per block rather than globally: match-braces
+ * and line-numbers both look for a class on the <pre>. CommonMark emits the
+ * language class on the inner <code>, so the wrapper needs decorating
+ * separately.
+ *
+ * Only <pre> elements containing a <code> are touched, so preformatted text
+ * that is not code is left alone. Existing classes are preserved, and a class
+ * already present is not repeated.
+ *
+ * @param string   $html    Rendered HTML.
+ * @param string[] $classes Class names to ensure are present.
+ * @return string HTML with the classes applied.
+ */
+function ozhmd_add_pre_classes(string $html, array $classes): string {
+	if ([] === $classes) {
+		return $html;
+	}
+
+	$filtered = preg_replace_callback(
+		'#<pre\b((?:"[^"]*"|\'[^\']*\'|[^>"\'])*)>(\s*<code\b)#i',
+		static function (array $match) use ($classes): string {
+			$attributes = $match[1];
+			$existing   = [];
+
+			if (preg_match('/(?<![\w-])class\s*=\s*(["\'])(.*?)\1/is', $attributes, $class_match)) {
+				$existing = preg_split('/\s+/', trim($class_match[2]), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+			}
+
+			$merged = array_values(array_unique(array_merge($existing, $classes)));
+
+			if ([] === $existing) {
+				$attributes .= ' class="' . implode(' ', $merged) . '"';
+			} else {
+				$attributes = preg_replace(
+					'/(?<![\w-])class\s*=\s*(["\'])(.*?)\1/is',
+					'class="' . implode(' ', $merged) . '"',
+					$attributes,
+					1
+				);
+			}
+
+			return '<pre' . rtrim((string) $attributes) . '>' . $match[2];
+		},
+		$html
+	);
+
+	return null === $filtered ? $html : $filtered;
+}
+
+/**
+ * Marker classes the Prism plugins need on each <pre>.
+ *
+ * @param bool $line_numbers Whether the line numbers plugin is enabled.
+ * @return string[] Class names.
+ */
+function ozhmd_prism_pre_classes(bool $line_numbers): array {
+	$classes = ['match-braces'];
+
+	if ($line_numbers) {
+		$classes[] = 'line-numbers';
+	}
+
+	return $classes;
 }

@@ -23,6 +23,15 @@
 	function renderPreview(markdown, preview) {
 		preview.innerHTML = window.marked.parse(markdown);
 
+		// Prism activates match-braces and line-numbers per block, from a class
+		// on the <pre>. The server adds the same classes on the front end.
+		var config = window.ozhmdEditor || {};
+		var classes = config.preClasses || [];
+
+		Array.prototype.forEach.call(preview.querySelectorAll('pre > code'), function (code) {
+			code.parentNode.classList.add.apply(code.parentNode.classList, classes);
+		});
+
 		if (window.Prism) {
 			window.Prism.highlightAllUnder(preview);
 		}

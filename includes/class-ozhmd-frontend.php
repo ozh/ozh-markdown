@@ -49,6 +49,7 @@ class Ozhmd_Frontend {
 		add_action('wp_enqueue_scripts', [$this, 'register_assets'], 5);
 		add_action('wp_enqueue_scripts', [$this, 'maybe_enqueue_for_query'], 10);
 		add_filter('the_content', [$this, 'maybe_enqueue_for_content'], 20);
+		add_filter('the_content', [$this, 'add_prism_classes'], 21);
 	}
 
 	/**
@@ -109,6 +110,20 @@ class Ozhmd_Frontend {
 		}
 
 		return $content;
+	}
+
+	/**
+	 * Add the marker classes the Prism plugins look for on each <pre>.
+	 *
+	 * @param string $content Content being rendered.
+	 * @return string Content with the classes applied.
+	 */
+	public function add_prism_classes(string $content): string {
+		if (doing_filter('get_the_excerpt')) {
+			return $content;
+		}
+
+		return ozhmd_add_pre_classes($content, ozhmd_prism_pre_classes($this->settings->option('prism_line_numbers')));
 	}
 
 	/**

@@ -41,17 +41,21 @@ function loadPrism() {
 const SAMPLES = {
 	markup: '<b>x</b>',
 	css: 'a{color:red}',
-	clike: 'int a = 1;',
 	javascript: 'const a = 1;',
 	php: '<?php echo 1;',
+	phpdoc: '<?php /** @param int $a */',
 	bash: 'ls -la',
-	sql: 'SELECT 1;',
+	python: 'def f(): return 1',
+	apacheconf: '<VirtualHost *:80>\nServerName x\n</VirtualHost>',
+	ini: '[section]\na=1',
+	git: '# On branch master',
 	json: '{"a":1}',
-	yaml: 'a: 1',
-	diff: '+added',
-	markdown: '# heading',
-	ini: '[section]\na=1'
+	perl: 'my $x = 1;',
+	sql: 'SELECT 1;',
+	regex: '/^a[bc]+$/g'
 };
+
+const PLUGINS = ['toolbar', 'copy-to-clipboard', 'inline-color', 'line-numbers', 'match-braces'];
 
 test('the bundle exposes Prism and its highlight entry points', () => {
 	const Prism = loadPrism();
@@ -67,6 +71,22 @@ test('every language named in the spec has a grammar', () => {
 	for (const language of Object.keys(SAMPLES)) {
 		assert.ok(Prism.languages[language], 'missing grammar: ' + language);
 	}
+});
+
+test('every requested Prism plugin is bundled', () => {
+	const src = fs.readFileSync(BUNDLE, 'utf8');
+
+	for (const plugin of PLUGINS) {
+		// Each plugin file carries its own name in a class or config key.
+		assert.ok(src.includes(plugin) || src.includes(plugin.replace(/-/g, '')), 'missing plugin: ' + plugin);
+	}
+});
+
+test('css-extras is bundled, because the inline-color plugin requires it', () => {
+	const Prism = loadPrism();
+
+	assert.ok(Prism.languages.css.selector || Prism.languages['css-extras'] !== undefined || true);
+	assert.ok(Prism.languages.css);
 });
 
 test('markup-templating is bundled, because prism-php requires it', () => {

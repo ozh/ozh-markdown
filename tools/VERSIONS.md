@@ -24,8 +24,19 @@ The bundle is Prism's core concatenated with a fixed language set, rather than
 Prism's autoloader, because the autoloader fetches grammars on demand and that
 means extra requests and a path dependency at runtime.
 
-Languages, as named in the spec: `markup`, `css`, `clike`, `javascript`, `php`,
-`bash`, `sql`, `json`, `yaml`, `diff`, `markdown`, `ini`.
+Languages: `markup` (HTML), `css`, `javascript`, `php`, `phpdoc`, `bash`
+(shell), `python`, `apacheconf`, `ini`, `git`, `json`, `perl`, `sql`, `regex`.
+`css-extras` is added because the inline-color plugin needs it, and `clike`,
+`markup-templating` and `javadoclike` arrive as resolved dependencies.
+
+Plugins: `toolbar`, `copy-to-clipboard`, `inline-color`, `line-numbers`,
+`match-braces`. copy-to-clipboard requires toolbar and ships no stylesheet of
+its own.
+
+`match-braces` and `line-numbers` activate from a class on the `<pre>`, not
+globally. `ozhmd_add_pre_classes()` adds them: on the front end through a
+the_content filter, and in the editor preview from editor.js. Line numbers are
+behind the Prism line numbers setting.
 
 **Dependencies are resolved automatically, and that matters.** `prism-php`
 requires `markup-templating`. A bundle without it loads cleanly and then throws
@@ -44,7 +55,14 @@ sample to `SAMPLES` in that test.
 ## The Prism stylesheet
 
 Light theme (`prism.min.css`) is applied unconditionally, dark
-(`prism-tomorrow.min.css`) as a `prefers-color-scheme: dark` override.
+(`prism-tomorrow.min.css`) as a `prefers-color-scheme: dark` override. Plugin
+stylesheets are appended after both.
+
+Two house rules are applied by `strip_house_rules()` in the fetch script, to
+the themes and to every plugin stylesheet: **no `text-shadow` anywhere**, and
+**no `background` on `.token` elements**. Both are upstream defaults that fight
+a flat presentation. Re-running the script reapplies them, so they cannot be
+lost on a version bump.
 
 Both facts are deliberate. Wrapping the light theme in a
 `prefers-color-scheme: light` query leaves a browser reporting no preference
