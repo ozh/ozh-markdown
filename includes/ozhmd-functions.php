@@ -296,3 +296,25 @@ function ozhmd_prism_pre_classes(bool $line_numbers): array {
 
 	return $classes;
 }
+
+/**
+ * Build the cache busting version for one of the plugin's own assets.
+ *
+ * OZHMD_VERSION alone is not enough. It only changes on a release, so every
+ * edit to a JS or CSS file between releases keeps the same asset URL, and
+ * browsers go on serving the copy they already hold. That silently hides
+ * changes: the code on disk is right, the code running is not.
+ *
+ * Appending the file's modification time ties the URL to the contents, so an
+ * edited file is refetched and an untouched one still hits the cache. The
+ * plugin version stays in front so a release busts everything even when the
+ * files land with preserved timestamps.
+ *
+ * @param string $relative_path Asset path relative to the plugin root, e.g. "assets/js/upload.js".
+ * @return string Version string for wp_enqueue_script() and friends.
+ */
+function ozhmd_asset_version(string $relative_path): string {
+	$mtime = @filemtime(OZHMD_DIR . $relative_path);
+
+	return false === $mtime ? OZHMD_VERSION : OZHMD_VERSION . '.' . $mtime;
+}

@@ -58,8 +58,8 @@ class Ozhmd_Frontend {
 	 * @return void
 	 */
 	public function register_assets(): void {
-		wp_register_style('ozhmd-prism', OZHMD_URL . 'assets/css/vendor/prism.css', [], OZHMD_VERSION);
-		wp_register_script('ozhmd-prism', OZHMD_URL . 'assets/js/vendor/prism.js', [], OZHMD_VERSION, true);
+		wp_register_style('ozhmd-prism', OZHMD_URL . 'assets/css/vendor/prism.css', [], ozhmd_asset_version('assets/css/vendor/prism.css'));
+		wp_register_script('ozhmd-prism', OZHMD_URL . 'assets/js/vendor/prism.js', [], ozhmd_asset_version('assets/js/vendor/prism.js'), true);
 	}
 
 	/**

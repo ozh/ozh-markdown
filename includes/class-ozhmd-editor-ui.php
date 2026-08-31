@@ -209,20 +209,20 @@ class Ozhmd_Editor_UI {
 		wp_enqueue_media($post_id > 0 ? ['post' => $post_id] : []);
 
 		wp_enqueue_style('dashicons');
-		wp_enqueue_style('ozhmd-codemirror', OZHMD_URL . 'assets/css/vendor/codemirror.css', [], OZHMD_VERSION);
-		wp_enqueue_style('ozhmd-prism', OZHMD_URL . 'assets/css/vendor/prism.css', [], OZHMD_VERSION);
-		wp_enqueue_style('ozhmd-editor', OZHMD_URL . 'assets/css/editor.css', ['ozhmd-codemirror'], OZHMD_VERSION);
+		wp_enqueue_style('ozhmd-codemirror', OZHMD_URL . 'assets/css/vendor/codemirror.css', [], ozhmd_asset_version('assets/css/vendor/codemirror.css'));
+		wp_enqueue_style('ozhmd-prism', OZHMD_URL . 'assets/css/vendor/prism.css', [], ozhmd_asset_version('assets/css/vendor/prism.css'));
+		wp_enqueue_style('ozhmd-editor', OZHMD_URL . 'assets/css/editor.css', ['ozhmd-codemirror'], ozhmd_asset_version('assets/css/editor.css'));
 
-		wp_enqueue_script('ozhmd-codemirror', OZHMD_URL . 'assets/js/vendor/codemirror.js', [], OZHMD_VERSION, true);
-		wp_enqueue_script('ozhmd-codemirror-markdown', OZHMD_URL . 'assets/js/vendor/codemirror-markdown.js', ['ozhmd-codemirror'], OZHMD_VERSION, true);
-		wp_enqueue_script('ozhmd-marked', OZHMD_URL . 'assets/js/vendor/marked.min.js', [], OZHMD_VERSION, true);
-		wp_enqueue_script('ozhmd-prism', OZHMD_URL . 'assets/js/vendor/prism.js', [], OZHMD_VERSION, true);
+		wp_enqueue_script('ozhmd-codemirror', OZHMD_URL . 'assets/js/vendor/codemirror.js', [], ozhmd_asset_version('assets/js/vendor/codemirror.js'), true);
+		wp_enqueue_script('ozhmd-codemirror-markdown', OZHMD_URL . 'assets/js/vendor/codemirror-markdown.js', ['ozhmd-codemirror'], ozhmd_asset_version('assets/js/vendor/codemirror-markdown.js'), true);
+		wp_enqueue_script('ozhmd-marked', OZHMD_URL . 'assets/js/vendor/marked.min.js', [], ozhmd_asset_version('assets/js/vendor/marked.min.js'), true);
+		wp_enqueue_script('ozhmd-prism', OZHMD_URL . 'assets/js/vendor/prism.js', [], ozhmd_asset_version('assets/js/vendor/prism.js'), true);
 
 		wp_enqueue_script(
 			'ozhmd-editor',
 			OZHMD_URL . 'assets/js/editor.js',
 			['ozhmd-codemirror', 'ozhmd-codemirror-markdown', 'ozhmd-marked', 'ozhmd-prism'],
-			OZHMD_VERSION,
+			ozhmd_asset_version('assets/js/editor.js'),
 			true
 		);
 
@@ -234,7 +234,7 @@ class Ozhmd_Editor_UI {
 			'ozhmd-toolbar-lib',
 			OZHMD_URL . 'assets/js/lib/ozhmd-toolbar-lib.js',
 			[],
-			OZHMD_VERSION,
+			ozhmd_asset_version('assets/js/lib/ozhmd-toolbar-lib.js'),
 			true
 		);
 
@@ -242,7 +242,7 @@ class Ozhmd_Editor_UI {
 			'ozhmd-toolbar',
 			OZHMD_URL . 'assets/js/toolbar.js',
 			['ozhmd-toolbar-lib', 'ozhmd-editor'],
-			OZHMD_VERSION,
+			ozhmd_asset_version('assets/js/toolbar.js'),
 			true
 		);
 
@@ -250,7 +250,7 @@ class Ozhmd_Editor_UI {
 			'ozhmd-upload-lib',
 			OZHMD_URL . 'assets/js/lib/ozhmd-upload-lib.js',
 			[],
-			OZHMD_VERSION,
+			ozhmd_asset_version('assets/js/lib/ozhmd-upload-lib.js'),
 			true
 		);
 
@@ -258,7 +258,7 @@ class Ozhmd_Editor_UI {
 			'ozhmd-upload',
 			OZHMD_URL . 'assets/js/upload.js',
 			['ozhmd-upload-lib', 'ozhmd-editor'],
-			OZHMD_VERSION,
+			ozhmd_asset_version('assets/js/upload.js'),
 			true
 		);
 
