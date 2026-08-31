@@ -68,3 +68,22 @@ test('the editor makes the visible text the input field', () => {
 test('the editor turns spellchecking on', () => {
 	assert.strictEqual(bootEditor().spellcheck, true);
 });
+
+test('the editor refuses CodeMirror own file drop handling', () => {
+	// CodeMirror 5 handles dropped files itself: onDrop reads every one with
+	// FileReader and inserts the text at the drop position, with no size limit
+	// and no say from us. Its listener sits on the editor element, a
+	// descendant of [data-ozhmd-editor], so it runs before the uploader's and
+	// preventDefault() there cannot cancel it. The result was a dropped file
+	// being inserted even after the uploader had refused it for being too big.
+	//
+	// An empty array is truthy and contains nothing, so CodeMirror's
+	// indexOf(allowDropFileTypes, file.type) == -1 test skips every file
+	// before the read. The uploader is then the only thing handling drops.
+	// editor.js runs in a vm context, so its array has a different prototype
+	// and deepStrictEqual would reject it. Array.isArray works across realms.
+	const types = bootEditor().allowDropFileTypes;
+
+	assert.ok(Array.isArray(types), 'allowDropFileTypes is an array');
+	assert.strictEqual(types.length, 0, 'allowDropFileTypes matches no type');
+});

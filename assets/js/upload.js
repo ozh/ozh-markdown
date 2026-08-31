@@ -1,9 +1,14 @@
 /**
- * GitHub style image insertion for the Markdown editor.
+ * GitHub style file insertion for the Markdown editor.
  *
  * Dropping or pasting images uploads them and replaces an in-flight
  * placeholder with the finished Markdown. Each file gets its own placeholder
  * and is replaced independently, so one failure cannot disturb the others.
+ *
+ * Dropping a text file inlines its contents as a fenced code block instead,
+ * with a language taken from the extension, or from the contents when the name
+ * gives nothing away. That path is local: the file is read in the browser and
+ * nothing is uploaded.
  *
  * All string manipulation lives in ozhmd-upload-lib.js, which is unit tested.
  * This file is the DOM and network wiring around it.
@@ -37,6 +42,35 @@
 
 		el.value = el.value.slice(0, start) + text + el.value.slice(end);
 		el.selectionStart = el.selectionEnd = start + text.length;
+	}
+
+	/**
+	 * Insert a block level construct at the cursor, on its own line.
+	 *
+	 * A fence opened halfway through a line is not a fence, so a newline goes
+	 * in front unless the cursor already sits at the start of one. Another
+	 * follows the block, so whatever came after the cursor keeps its own line.
+	 *
+	 * @param {object} target Editor handle from resolveTarget().
+	 * @param {string} text Block to insert.
+	 * @return {void}
+	 */
+	function insertBlockAtCursor(target, text) {
+		var atLineStart;
+
+		if (target.editor) {
+			atLineStart = 0 === target.editor.getCursor('from').ch;
+		} else {
+			var start = target.textarea.selectionStart;
+
+			atLineStart = 0 === start || '\n' === target.textarea.value.charAt(start - 1);
+		}
+
+		insertAtCursor(target, (atLineStart ? '' : '\n') + text + '\n');
+
+		if (target.editor) {
+			target.editor.save();
+		}
 	}
 
 	/**
@@ -132,34 +166,78 @@
 	}
 
 	/**
-	 * Upload a list of files in the order they were given.
+	 * Work out the fence language for a file, sniffing when the name will not say.
 	 *
-	 * Sequential rather than parallel, so the placeholders are replaced in the
-	 * order the files were dropped.
+	 * A shell script called "updatewp" carries no extension at all, so the
+	 * contents have to answer. Only the head of the file is read for that: a
+	 * dropped video is then refused without being pulled into memory whole.
+	 *
+	 * @param {File} file File to inspect.
+	 * @return {Promise} Resolves to a fence info string, or null when binary.
+	 */
+	function resolveLanguage(file) {
+		var language = lib.textFileLanguage(file.name);
+
+		if (null !== language) {
+			return window.Promise.resolve(language);
+		}
+
+		return file.slice(0, lib.SNIFF_BYTES).text().then(lib.sniffTextLanguage);
+	}
+
+	/**
+	 * Read a text file and insert it as a fenced code block.
+	 *
+	 * Nothing is uploaded: the file never leaves the browser, and the media
+	 * library gains no attachment.
 	 *
 	 * @param {object} target Editor handle from resolveTarget().
-	 * @param {File[]} files Files to upload.
+	 * @param {File} file File to read.
+	 * @return {Promise} Resolves once the block has been inserted, or the error shown.
+	 */
+	function insertTextFile(target, file) {
+		// Checked before anything is read, so an oversized file is refused on
+		// its metadata alone. Images skip this: they upload, and the server
+		// decides what it will take.
+		if (file.size > lib.resolveMaxTextBytes(config.maxTextBytes)) {
+			showError(file.name + ': ' + config.i18n.tooLarge);
+
+			return window.Promise.resolve();
+		}
+
+		return resolveLanguage(file).then(function (language) {
+			if (null === language) {
+				showError(file.name + ': ' + config.i18n.notAccepted);
+
+				return;
+			}
+
+			return file.text().then(function (content) {
+				insertBlockAtCursor(target, lib.buildCodeFence(content, language));
+			});
+		}).catch(function () {
+			showError(file.name + ': ' + config.i18n.readFailed);
+		});
+	}
+
+	/**
+	 * Handle a list of dropped files in the order they were given.
+	 *
+	 * Images upload and everything else goes down the text path, which inlines
+	 * it as a code block or reports an error once it has looked at it.
+	 *
+	 * One sequential chain rather than parallel work, and one chain for both
+	 * kinds rather than one per kind, so a drop mixing a screenshot and a
+	 * snippet inserts them the way they were dropped.
+	 *
+	 * @param {object} target Editor handle from resolveTarget().
+	 * @param {File[]} files Files to handle.
 	 * @return {void}
 	 */
-	function uploadAll(target, files) {
-		var images = [];
-		var rejected = [];
-
-		files.forEach(function (file) {
-			if (lib.isImageFile(file.type)) {
-				images.push(file);
-			} else {
-				rejected.push(file.name);
-			}
-		});
-
-		rejected.forEach(function (name) {
-			showError(name + ': ' + config.i18n.notAnImage);
-		});
-
-		images.reduce(function (chain, file) {
+	function handleFiles(target, files) {
+		files.reduce(function (chain, file) {
 			return chain.then(function () {
-				return uploadFile(target, file);
+				return lib.isImageFile(file.type) ? uploadFile(target, file) : insertTextFile(target, file);
 			});
 		}, window.Promise.resolve());
 	}
@@ -190,7 +268,10 @@
 	function init() {
 		var container = document.querySelector('[data-ozhmd-editor]');
 
-		if (!container || !lib || !config || !window.fetch) {
+		// Blob.text() is what reads a dropped text file. It arrived later than
+		// fetch, so it gets its own guard: an old browser disables the whole
+		// handler rather than throwing halfway through a drop.
+		if (!container || !lib || !config || !window.fetch || !window.Blob || !window.Blob.prototype.text) {
 			return;
 		}
 
@@ -217,7 +298,7 @@
 			var target = resolveTarget();
 
 			if (target) {
-				uploadAll(target, Array.prototype.slice.call(files));
+				handleFiles(target, Array.prototype.slice.call(files));
 			}
 		});
 
@@ -243,7 +324,7 @@
 			var target = resolveTarget();
 
 			if (target) {
-				uploadAll(target, files);
+				handleFiles(target, files);
 			}
 		});
 	}

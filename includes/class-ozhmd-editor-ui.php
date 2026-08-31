@@ -13,6 +13,15 @@
 class Ozhmd_Editor_UI {
 
 	/**
+	 * Largest text file the editor will inline as a code block, in bytes.
+	 *
+	 * Images are not subject to this: they upload, and the server decides.
+	 * A text file is inlined into the post itself, so the limit is about what
+	 * belongs in a post rather than what the site can store.
+	 */
+	public const MAX_TEXT_BYTES = 102400;
+
+	/**
 	 * Post type eligibility resolver.
 	 *
 	 * @var Ozhmd_Post_Types
@@ -277,11 +286,15 @@ class Ozhmd_Editor_UI {
 		);
 
 		wp_localize_script('ozhmd-upload', 'ozhmdUpload', [
-			'endpoint' => rest_url(Ozhmd_Uploader::NAMESPACE . Ozhmd_Uploader::ROUTE),
-			'nonce'    => wp_create_nonce('wp_rest'),
-			'postId'   => (int) get_the_ID(),
-			'i18n'     => [
-				'notAnImage'   => __('is not an image, so it was not uploaded.', 'ozh-markdown'),
+			'endpoint'     => rest_url(Ozhmd_Uploader::NAMESPACE . Ozhmd_Uploader::ROUTE),
+			'nonce'        => wp_create_nonce('wp_rest'),
+			'postId'       => (int) get_the_ID(),
+			'maxTextBytes' => self::MAX_TEXT_BYTES,
+			'i18n'         => [
+				'notAccepted'  => __('is not an image, and does not look like a text file, so it was not inserted.', 'ozh-markdown'),
+				/* translators: %s: file size limit, already formatted, e.g. "100 KB". */
+				'tooLarge'     => sprintf(__('is larger than %s, so it was not inserted.', 'ozh-markdown'), size_format(self::MAX_TEXT_BYTES)),
+				'readFailed'   => __('could not be read.', 'ozh-markdown'),
 				'uploadFailed' => __('The upload failed.', 'ozh-markdown'),
 			],
 		]);

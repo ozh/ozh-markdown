@@ -90,7 +90,19 @@
 			// visible text the input field is what gives us the red squiggles
 			// and the "Spelling" entry in the right click menu.
 			inputStyle: 'contenteditable',
-			spellcheck: true
+			spellcheck: true,
+
+			// Hands every dropped file to upload.js instead of CodeMirror.
+			// CodeMirror's own onDrop reads each file with FileReader and
+			// inserts the text at the drop position, with no size limit and no
+			// way for us to veto it: its listener is on the editor element,
+			// inside [data-ozhmd-editor], so it runs before the uploader's and
+			// preventDefault() there comes too late. A big file was being
+			// inserted anyway, right after the uploader had refused it.
+			//
+			// An empty array is truthy and matches no MIME type, so
+			// CodeMirror skips every file before reading it.
+			allowDropFileTypes: []
 		});
 
 		// Published so upload.js can insert at the cursor through the same
