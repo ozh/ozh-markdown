@@ -31,7 +31,6 @@ require_once OZHMD_DIR . 'includes/class-ozhmd-converter.php';
 require_once OZHMD_DIR . 'includes/class-ozhmd-post-types.php';
 require_once OZHMD_DIR . 'includes/class-ozhmd-post-storage.php';
 require_once OZHMD_DIR . 'includes/class-ozhmd-editor-ui.php';
-require_once OZHMD_DIR . 'includes/class-ozhmd-settings.php';
 require_once OZHMD_DIR . 'includes/class-ozhmd-frontend.php';
 require_once OZHMD_DIR . 'includes/class-ozhmd-uploader.php';
 
@@ -54,13 +53,10 @@ function ozhmd_bootstrap(): void {
 	$storage = new Ozhmd_Post_Storage($converter, $post_types);
 	$storage->register_hooks();
 
-	$settings = new Ozhmd_Settings($post_types);
-	$settings->register_hooks();
-
-	$editor_ui = new Ozhmd_Editor_UI($post_types, $storage, $settings);
+	$editor_ui = new Ozhmd_Editor_UI($post_types, $storage);
 	$editor_ui->register_hooks();
 
-	$frontend = new Ozhmd_Frontend($settings);
+	$frontend = new Ozhmd_Frontend();
 	$frontend->register_hooks();
 
 	$uploader = new Ozhmd_Uploader();
@@ -75,19 +71,3 @@ function ozhmd_bootstrap(): void {
 }
 
 add_action('plugins_loaded', 'ozhmd_bootstrap');
-
-/**
- * Seed default options on activation.
- *
- * Existing options are never overwritten, so deactivating and reactivating the
- * plugin does not reset the settings.
- *
- * @return void
- */
-function ozhmd_activate(): void {
-	if (false === get_option('ozhmd_options')) {
-		add_option('ozhmd_options', ozhmd_default_options());
-	}
-}
-
-register_activation_hook(OZHMD_FILE, 'ozhmd_activate');

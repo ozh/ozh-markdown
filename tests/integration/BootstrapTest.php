@@ -59,34 +59,7 @@ final class BootstrapTest extends Ozhmd_Integration_Test_Case {
 	 */
 	public function test_pure_functions_are_available(): void {
 		$this->assertTrue(function_exists('ozhmd_eligible_post_types'));
-		$this->assertTrue(function_exists('ozhmd_default_options'));
-	}
-
-	/**
-	 * Activation seeds the default options when none exist yet.
-	 *
-	 * @return void
-	 */
-	public function test_activation_seeds_the_default_options(): void {
-		delete_option('ozhmd_options');
-
-		ozhmd_activate();
-
-		$this->assertSame(ozhmd_default_options(), get_option('ozhmd_options'));
-	}
-
-	/**
-	 * Activation leaves existing options untouched rather than overwriting them.
-	 *
-	 * @return void
-	 */
-	public function test_activation_does_not_overwrite_existing_options(): void {
-		$existing = ['comments_enabled' => false, 'comment_preview' => true, 'prism_line_numbers' => true];
-		update_option('ozhmd_options', $existing);
-
-		ozhmd_activate();
-
-		$this->assertSame($existing, get_option('ozhmd_options'));
+		$this->assertTrue(function_exists('ozhmd_prism_pre_classes'));
 	}
 
 	/**

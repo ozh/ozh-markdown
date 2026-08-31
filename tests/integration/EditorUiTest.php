@@ -36,7 +36,7 @@ final class EditorUiTest extends Ozhmd_Integration_Test_Case {
 		$factory = new Ozhmd_Converter_Factory();
 		$storage = new Ozhmd_Post_Storage(new Ozhmd_Converter($factory->create()), $this->post_types);
 
-		$this->editor = new Ozhmd_Editor_UI($this->post_types, $storage, new Ozhmd_Settings($this->post_types));
+		$this->editor = new Ozhmd_Editor_UI($this->post_types, $storage);
 	}
 
 	/**

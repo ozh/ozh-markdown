@@ -36,23 +36,14 @@ class Ozhmd_Editor_UI {
 	private Ozhmd_Post_Storage $storage;
 
 	/**
-	 * Settings, used for the Prism line numbers toggle.
-	 *
-	 * @var Ozhmd_Settings
-	 */
-	private Ozhmd_Settings $settings;
-
-	/**
 	 * Store the injected dependencies.
 	 *
 	 * @param Ozhmd_Post_Types   $post_types Eligibility resolver.
 	 * @param Ozhmd_Post_Storage $storage    Post storage.
-	 * @param Ozhmd_Settings     $settings   Plugin settings.
 	 */
-	public function __construct(Ozhmd_Post_Types $post_types, Ozhmd_Post_Storage $storage, Ozhmd_Settings $settings) {
+	public function __construct(Ozhmd_Post_Types $post_types, Ozhmd_Post_Storage $storage) {
 		$this->post_types = $post_types;
 		$this->storage    = $storage;
-		$this->settings   = $settings;
 	}
 
 	/**
@@ -250,7 +241,7 @@ class Ozhmd_Editor_UI {
 		);
 
 		wp_localize_script('ozhmd-editor', 'ozhmdEditor', [
-			'preClasses' => ozhmd_prism_pre_classes($this->settings->option('prism_line_numbers')),
+			'preClasses' => ozhmd_prism_pre_classes(),
 		]);
 
 		wp_enqueue_script(

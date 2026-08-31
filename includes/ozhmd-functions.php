@@ -168,40 +168,6 @@ function ozhmd_is_allowed_image_mime(string $mime, array $allowed_mimes): bool {
 }
 
 /**
- * Default plugin options.
- *
- * @return array<string, bool> Option keys mapped to their default values.
- */
-function ozhmd_default_options(): array {
-	return [
-		'comments_enabled'   => true,
-		'comment_preview'    => false,
-		'prism_line_numbers' => false,
-	];
-}
-
-/**
- * Coerce a submitted settings payload to the known option shape.
- *
- * The defaults array is used only as the whitelist of known keys. Unknown keys
- * are dropped and absent keys become false, because an unchecked checkbox is
- * simply missing from the payload rather than present and empty.
- *
- * @param array<string, mixed> $input    Raw submitted values.
- * @param array<string, bool>  $defaults Known option keys and their defaults.
- * @return array<string, bool> Sanitized options, one entry per known key.
- */
-function ozhmd_sanitize_options(array $input, array $defaults): array {
-	$clean = [];
-
-	foreach ($defaults as $key => $default) {
-		$clean[$key] = array_key_exists($key, $input) && (bool) $input[$key];
-	}
-
-	return $clean;
-}
-
-/**
  * Prism languages bundled in assets/js/vendor/prism.js.
  *
  * Kept in step with PRISM_LANGUAGES in tools/fetch-vendor.sh by hand. The
@@ -284,17 +250,17 @@ function ozhmd_add_pre_classes(string $html, array $classes): string {
 /**
  * Marker classes the Prism plugins need on each <pre>.
  *
- * @param bool $line_numbers Whether the line numbers plugin is enabled.
+ * Both plugins are always on: the plugin has no settings, so there is nothing
+ * to branch on. The list stays a single function rather than an inlined array
+ * because it has two callers that must not drift, the front end decorating
+ * published content and the editor decorating its preview pane. A preview
+ * highlighting differently from the published page would be worse than the
+ * indirection costs.
+ *
  * @return string[] Class names.
  */
-function ozhmd_prism_pre_classes(bool $line_numbers): array {
-	$classes = ['match-braces'];
-
-	if ($line_numbers) {
-		$classes[] = 'line-numbers';
-	}
-
-	return $classes;
+function ozhmd_prism_pre_classes(): array {
+	return ['match-braces', 'line-numbers'];
 }
 
 /**

@@ -92,7 +92,7 @@ Comments are a different beast from posts: input is untrusted, written on the fr
 1. **Storage**: store the raw Markdown in comment meta `_ozhmd_markdown`, and write the converted, sanitized HTML into `comment_content` - mirroring the post logic, so the "no lock-in" rule holds for comments too.
 2. **Conversion point**: hook into comment save (`preprocess_comment` and/or `wp_insert_comment` / `edit_comment`) so that conversion happens for front-end submissions, admin replies, and admin comment edits alike.
 3. **Admin comment editing**: on the Edit Comment screen, load `_ozhmd_markdown` into the textarea (falling back to `comment_content` if absent), and re-run conversion on save.
-4. **Front-end live preview**: optional, off by default (a settings toggle). When enabled, render a preview pane below the comment form using the same `marked.js` bundle. Keep it lightweight - do not enqueue the editor JS on pages where the comment form isn't displayed, and never enqueue CodeMirror on the front end.
+4. **Front-end live preview**: undecided, and a build-time decision rather than a setting. If it ships, render a preview pane below the comment form using the same `marked.js` bundle. Keep it lightweight - do not enqueue the editor JS on pages where the comment form isn't displayed, and never enqueue CodeMirror on the front end.
 
 ### Security requirements for comments (important)
 
@@ -123,7 +123,7 @@ Note that the client-side (`marked.js`) and server-side (`league/commonmark`) re
 - **Front-end enqueue must be conditional**: only load Prism on pages whose rendered content (post content or comments) actually contains a code block. Do not enqueue it site-wide. A simple check for `<pre><code` in the content being rendered is sufficient - err on the side of loading it when unsure, but never load it on pages with no code at all.
 - Bundle both a light and a dark Prism theme, and switch between them via `prefers-color-scheme` (or a theme-provided body class if one is present). The theme CSS must be overridable by the active WordPress theme - enqueue it with a low priority and avoid `!important`.
 - In the editor preview pane, re-run `Prism.highlightAllUnder()` on the preview container after each debounced re-render, not `Prism.highlightAll()` on the whole document.
-- Prism's Line Numbers plugin is optional; if included, keep it behind a settings toggle (default off) since it adds markup and CSS weight.
+- Prism's Line Numbers plugin is bundled and always on. It costs some markup and CSS weight, and that is accepted rather than made configurable. The `line-numbers` marker class is added to every `<pre>` wrapping a `<code>`, on the front end and in the editor preview alike, from a single list in `ozhmd_prism_pre_classes()` so the two cannot drift.
 
 ## Suggested file structure
 
@@ -136,7 +136,6 @@ ozh-markdown/
     class-ozhmd-comment-editor.php   (comment form + admin comment screen)
     class-ozhmd-converter.php        (wraps league/commonmark, trusted/untrusted instances)
     class-ozhmd-frontend.php         (conditional Prism enqueue on the front end)
-    class-ozhmd-settings.php         (options page)
   assets/
     js/
       editor.js                      (CodeMirror init + debounced preview + Prism)
@@ -162,13 +161,13 @@ ozh-markdown/
 
 ## Settings
 
-A single settings page (Settings > Ozh' Markdown):
-- Toggle: enable Markdown for comments (default: on).
-- Toggle: enable front-end live preview under the comment form (default: off).
-- Toggle: Prism line numbers (default: off).
-- Read-only informational list of the post types currently handled, so the admin can see what's covered.
+**There are none.** No settings page, no options, no row in the options table. The plugin never calls `get_option()`, `add_option()` or `register_setting()`.
 
-No per-post-type opt-in checkboxes: the plugin applies everywhere by design. Fine-grained control is done through the `ozhmd_excluded_post_types` filter.
+This is the same reasoning that rules out per-post-type opt-in checkboxes, applied to the whole plugin: it applies everywhere by design, and the one point of control that exists is a filter for the person who needs it rather than a checkbox for everyone who does not. Fine-grained control over which post types are covered is done through the `ozhmd_excluded_post_types` filter.
+
+Two consequences worth stating outright, since they settle questions a toggle would otherwise have deferred:
+- Prism line numbers are always on. See the Prism section below.
+- Markdown for comments is unconditional. When comments are built, they are Markdown. Whether the front-end live preview ships at all is a design decision for that part, not a runtime setting.
 
 ## Coding conventions
 
@@ -208,7 +207,7 @@ Test coverage should specifically include, at minimum: the untrusted converter s
 
 ## Suggested build order
 
-1. Scaffold plugin skeleton, activation/deactivation hooks, settings page, PHPUnit setup (test harness first, so everything after it is written test-first).
+1. Scaffold plugin skeleton and PHPUnit setup (test harness first, so everything after it is written test-first). No activation hook is needed: with no options to seed, there is nothing for it to do.
 2. `class-ozhmd-converter.php`: the two converter instances (trusted/untrusted) with their distinct configs. Build and test this first - everything else depends on it.
 3. Post path: `_ozhmd_markdown` meta, `save_post` conversion into `post_content`, including REST/XML-RPC saves.
 4. Admin editor UI: disable Gutenberg + TinyMCE for all eligible post types, render the textarea meta box.
@@ -217,5 +216,5 @@ Test coverage should specifically include, at minimum: the untrusted converter s
 7. Front end: conditional Prism enqueue, light/dark theme switching.
 8. Drag & drop upload: REST endpoint with capability and nonce checks first, then the client-side drop/paste handling and placeholder replacement.
 9. Comment path: conversion on save, comment meta storage, admin Edit Comment screen, sanitization pipeline including the `language-*` class allowance.
-10. Optional front-end comment preview behind its settings toggle.
+10. Front-end comment preview, if it is decided it should ship at all.
 11. Manual test pass: new post, legacy post, custom post type, REST API save, front-end comment, admin comment reply, admin comment edit, comment containing raw `<script>` (must be stripped), comment containing a link (must get `nofollow ugc`), post with a fenced PHP block (highlighted in preview *and* on the front end), comment with a fenced block (class survives KSES), page with no code at all (Prism must **not** be enqueued), single image drop, multi-image drop, image paste, non-image drop (rejected), drop on a brand new unsaved post, drop as a user without `upload_files` (rejected server-side).

@@ -24,7 +24,7 @@ final class FrontendTest extends Ozhmd_Integration_Test_Case {
 	protected function setUp(): void {
 		parent::setUp();
 
-		$this->frontend = new Ozhmd_Frontend(new Ozhmd_Settings(new Ozhmd_Post_Types()));
+		$this->frontend = new Ozhmd_Frontend();
 		$this->frontend->register_assets();
 	}
 

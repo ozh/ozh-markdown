@@ -89,12 +89,14 @@ final class PreClassesTest extends TestCase {
 	}
 
 	/**
-	 * Line numbers are only requested when the setting is on.
+	 * Line numbers are unconditional.
+	 *
+	 * The plugin has no settings, so this guards a decision rather than a
+	 * mechanism: it should fail if a condition is ever reintroduced here.
 	 *
 	 * @return void
 	 */
-	public function test_line_numbers_are_opt_in(): void {
-		$this->assertSame(['match-braces'], ozhmd_prism_pre_classes(false));
-		$this->assertSame(['match-braces', 'line-numbers'], ozhmd_prism_pre_classes(true));
+	public function test_line_numbers_are_always_on(): void {
+		$this->assertSame(['match-braces', 'line-numbers'], ozhmd_prism_pre_classes());
 	}
 }

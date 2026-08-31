@@ -18,27 +18,11 @@
 class Ozhmd_Frontend {
 
 	/**
-	 * Settings, used for the Prism line numbers toggle.
-	 *
-	 * @var Ozhmd_Settings
-	 */
-	private Ozhmd_Settings $settings;
-
-	/**
 	 * Whether the assets have already been enqueued for this request.
 	 *
 	 * @var bool
 	 */
 	private bool $enqueued = false;
-
-	/**
-	 * Store the injected settings.
-	 *
-	 * @param Ozhmd_Settings $settings Plugin settings.
-	 */
-	public function __construct(Ozhmd_Settings $settings) {
-		$this->settings = $settings;
-	}
 
 	/**
 	 * Register the front end hooks.
@@ -123,7 +107,7 @@ class Ozhmd_Frontend {
 			return $content;
 		}
 
-		return ozhmd_add_pre_classes($content, ozhmd_prism_pre_classes($this->settings->option('prism_line_numbers')));
+		return ozhmd_add_pre_classes($content, ozhmd_prism_pre_classes());
 	}
 
 	/**
