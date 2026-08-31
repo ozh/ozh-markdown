@@ -1,7 +1,8 @@
 /**
  * Formatting toolbar for the Markdown editor.
  *
- * Each action wraps, prefixes or replaces the current selection. The pure
+ * Each action wraps, prefixes or replaces the current selection, or, for the
+ * heading, rewrites the whole lines that selection spans. The pure
  * transforms live in ozhmd-toolbar-lib.js and are unit tested; this file is the
  * DOM wiring, the keyboard shortcuts, and the Add Media integration.
  */
@@ -9,6 +10,39 @@
 	'use strict';
 
 	var lib = window.ozhmdToolbarLib;
+
+	// Which pane the eye button is currently showing, and the class each state
+	// puts on the editor container. Both panes is the default, and needs no
+	// class of its own.
+	var view = 'both';
+	var VIEW_CLASSES = { both: '', source: 'ozhmd-view-source', preview: 'ozhmd-view-preview' };
+
+	/**
+	 * Show the next combination of panes.
+	 *
+	 * @return {void}
+	 */
+	function cycleView() {
+		var container = document.querySelector('[data-ozhmd-editor]');
+
+		if (!container) {
+			return;
+		}
+
+		view = lib.nextView(view);
+
+		container.classList.remove(VIEW_CLASSES.source, VIEW_CLASSES.preview);
+
+		if (VIEW_CLASSES[view]) {
+			container.classList.add(VIEW_CLASSES[view]);
+		}
+
+		// CodeMirror cannot measure a hidden pane, so it comes back with a
+		// stale gutter and cursor unless it is told to look again.
+		if (window.ozhmdCodeMirror && 'preview' !== view) {
+			window.ozhmdCodeMirror.refresh();
+		}
+	}
 
 	/**
 	 * Read the current selection from whichever editor is active.
@@ -23,6 +57,43 @@
 		}
 
 		var cm = window.ozhmdCodeMirror || null;
+
+		/**
+		 * Bounds of the whole lines the selection spans.
+		 *
+		 * @return {object} CodeMirror positions, or textarea offsets.
+		 */
+		function blockBounds() {
+			if (cm) {
+				var to = cm.getCursor('to');
+
+				return {
+					start: { line: cm.getCursor('from').line, ch: 0 },
+					end: { line: to.line, ch: cm.getLine(to.line).length }
+				};
+			}
+
+			var value = textarea.value;
+			var after = value.indexOf('\n', textarea.selectionEnd);
+
+			return {
+				start: value.lastIndexOf('\n', textarea.selectionStart - 1) + 1,
+				end: -1 === after ? value.length : after
+			};
+		}
+
+		/**
+		 * Whether the selection stays within a single line.
+		 *
+		 * @return {boolean} True when it does.
+		 */
+		function withinOneLine() {
+			if (cm) {
+				return cm.getCursor('from').line === cm.getCursor('to').line;
+			}
+
+			return -1 === textarea.value.slice(textarea.selectionStart, textarea.selectionEnd).indexOf('\n');
+		}
 
 		return {
 			/**
@@ -75,6 +146,85 @@
 			},
 
 			/**
+			 * Whole lines the selection spans, the unit line transforms work on.
+			 *
+			 * @return {string} The lines, joined by newlines.
+			 */
+			getBlock: function () {
+				var bounds = blockBounds();
+
+				if (cm) {
+					return cm.getRange(bounds.start, bounds.end);
+				}
+
+				return textarea.value.slice(bounds.start, bounds.end);
+			},
+
+			/**
+			 * Replace those lines, leaving the caret on the same text.
+			 *
+			 * A caret on a single line is moved by however much that line grew,
+			 * so clicking a button twice in a row acts on the same spot. A
+			 * selection spanning several lines is reapplied over the new block
+			 * for the same reason.
+			 *
+			 * @param {object} result Result from a lib line transform.
+			 * @return {void}
+			 */
+			replaceBlock: function (result) {
+				var bounds = blockBounds();
+				var oneLine = withinOneLine();
+
+				if (cm) {
+					var from = cm.getCursor('from');
+					var to = cm.getCursor('to');
+
+					cm.replaceRange(result.text, bounds.start, bounds.end);
+
+					var base = cm.indexFromPos(bounds.start);
+
+					if (result.select) {
+						cm.setSelection(
+							cm.posFromIndex(base + result.select[0]),
+							cm.posFromIndex(base + result.select[1])
+						);
+					} else if (oneLine) {
+						cm.setSelection(
+							{ line: from.line, ch: Math.max(0, from.ch + result.shift) },
+							{ line: to.line, ch: Math.max(0, to.ch + result.shift) }
+						);
+					} else {
+						cm.setSelection(bounds.start, cm.posFromIndex(base + result.text.length));
+					}
+
+					cm.focus();
+					cm.save();
+
+					return;
+				}
+
+				var start = textarea.selectionStart;
+				var end = textarea.selectionEnd;
+
+				textarea.value = textarea.value.slice(0, bounds.start) +
+					result.text +
+					textarea.value.slice(bounds.end);
+
+				if (result.select) {
+					textarea.selectionStart = bounds.start + result.select[0];
+					textarea.selectionEnd = bounds.start + result.select[1];
+				} else if (oneLine) {
+					textarea.selectionStart = Math.max(bounds.start, start + result.shift);
+					textarea.selectionEnd = Math.max(bounds.start, end + result.shift);
+				} else {
+					textarea.selectionStart = bounds.start;
+					textarea.selectionEnd = bounds.start + result.text.length;
+				}
+
+				textarea.focus();
+			},
+
+			/**
 			 * Insert text at the cursor, replacing any selection.
 			 *
 			 * @param {string} text Text to insert.
@@ -89,17 +239,70 @@
 	/**
 	 * Apply a named action to the current selection.
 	 *
+	 * The view action is the one button that leaves the text alone, so it is
+	 * answered here before an editor is even looked for.
+	 *
 	 * @param {string} action Action name from the toolbar.
 	 * @return {void}
 	 */
 	function apply(action) {
+		if ('view' === action) {
+			cycleView();
+
+			return;
+		}
+
 		var editor = resolveEditor();
 
-		if (!editor || !lib.transforms[action]) {
+		if (!editor) {
+			return;
+		}
+
+		if (lib.lineTransforms[action]) {
+			editor.replaceBlock(lib.lineTransforms[action](editor.getBlock()));
+
+			return;
+		}
+
+		if (!lib.transforms[action]) {
 			return;
 		}
 
 		editor.replaceSelection(lib.transforms[action](editor.getSelection()));
+	}
+
+	/**
+	 * Carry a list on to the next line when enter is pressed inside one.
+	 *
+	 * Enter keeps its usual meaning everywhere else, and returning Pass is how
+	 * CodeMirror is told to go and do that. A bare marker is cleared instead of
+	 * repeated, which is how a writer leaves the list.
+	 *
+	 * @param {object} cm CodeMirror instance.
+	 * @return {object|undefined} CodeMirror.Pass to fall through, or nothing.
+	 */
+	function continueList(cm) {
+		if (cm.somethingSelected() || cm.listSelections().length > 1) {
+			return window.CodeMirror.Pass;
+		}
+
+		var cursor = cm.getCursor();
+		var line = cm.getLine(cursor.line);
+		var item = lib.listContinuation(line);
+
+		// A cursor sitting inside the marker itself is not yet writing the
+		// item, so enter there splits the line as it normally would.
+		if (!item || cursor.ch < item.markerLength) {
+			return window.CodeMirror.Pass;
+		}
+
+		if (item.empty) {
+			cm.replaceRange('', { line: cursor.line, ch: 0 }, { line: cursor.line, ch: line.length });
+
+			return;
+		}
+
+		cm.replaceSelection('\n' + item.prefix);
 	}
 
 	/**
@@ -156,6 +359,12 @@
 		});
 
 		interceptMediaInsert();
+
+		// editor.js runs first, so the instance is already there. A keymap
+		// added this way is consulted before CodeMirror's own bindings.
+		if (window.ozhmdCodeMirror && window.CodeMirror) {
+			window.ozhmdCodeMirror.addKeyMap({ Enter: continueList });
+		}
 
 		var shortcuts = { b: 'bold', i: 'italic', k: 'link' };
 

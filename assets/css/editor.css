@@ -24,6 +24,13 @@
 	display: flex;
 }
 
+/* The eye button's two other states. The remaining pane is flex: 1 1 50% with
+   nothing to share the row with, so it simply takes the full width. */
+.ozhmd-view-source .ozhmd-pane-preview,
+.ozhmd-view-preview .ozhmd-pane-source {
+	display: none;
+}
+
 /* No-JavaScript fallback: one full width column, no preview to show. */
 .ozhmd-editor-plain {
 	display: block;
@@ -52,6 +59,7 @@
 
 .ozhmd-preview {
 	padding: 10px 14px;
+	background: #f7f7f7;
 	overflow-wrap: break-word;
 	max-height: 80vh;
 	overflow-y: auto;
@@ -75,6 +83,22 @@
 	padding-left: 1em;
 	border-left: 4px solid #dcdcde;
 	color: #50575e;
+}
+
+/* wp-admin's common.css zeroes the padding of every list and strips bullets off
+   every ul. The preview shows document content, so it needs those back. ol is
+   left alone: the same file already gives it decimal markers and an indent. */
+.ozhmd-preview ul {
+	list-style: disc outside;
+	margin-left: 2em;
+}
+
+.ozhmd-preview ul ul {
+	list-style-type: circle;
+}
+
+.ozhmd-preview ul ul ul {
+	list-style-type: square;
 }
 
 .ozhmd-preview table {
@@ -152,14 +176,30 @@
 	justify-content: center;
 	width: 32px;
 	height: 32px;
+	/* WP's own .button min-height would otherwise win over the height above. */
+	min-height: 32px;
 	padding: 0;
+	line-height: 1;
 }
 
-.ozhmd-tool .dashicons {
+/* Breathing room after the last button of each run, which splits the row into
+   inline marks, blocks, lists, content and the view. The group selector is
+   there to outspecify core's `.wp-core-ui .button { margin: 0 }`. */
+.ozhmd-toolbar-group .ozhmd-tool[data-ozhmd-action="strikethrough"],
+.ozhmd-toolbar-group .ozhmd-tool[data-ozhmd-action="hr"],
+.ozhmd-toolbar-group .ozhmd-tool[data-ozhmd-action="task"],
+.ozhmd-toolbar-group .ozhmd-tool[data-ozhmd-action="table"] {
+	margin-right: 20px;
+}
+
+/* Outspecifies core's `.wp-core-ui .button .dashicons` line-height, which would
+   otherwise give the glyph a line box taller than the span and sink it. */
+.wp-core-ui .ozhmd-tool.button .dashicons {
 	width: 18px;
 	height: 18px;
 	font-size: 18px;
 	line-height: 1;
+	vertical-align: middle;
 }
 
 /* The media button loses the classic editor's own spacing rules. */

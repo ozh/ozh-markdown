@@ -118,20 +118,34 @@ class Ozhmd_Editor_UI {
 	 * draw, and the label used for both the tooltip and the accessible name.
 	 * Keyboard shortcuts are advertised in the tooltip where one exists.
 	 *
+	 * The order is meaningful: inline marks, then block elements, then lists,
+	 * then the things that carry their own content, then the view. The last
+	 * button of each of those runs is given room to its right by the CSS.
+	 *
 	 * @return array<int, array<string, string>> Button definitions.
 	 */
 	public function toolbar_buttons(): array {
 		return [
-			['action' => 'heading', 'icon' => 'editor-textcolor', 'label' => __('Heading', 'ozh-markdown'), 'key' => ''],
+			['action' => 'heading', 'icon' => 'heading', 'label' => __('Heading', 'ozh-markdown'), 'key' => ''],
 			['action' => 'bold', 'icon' => 'editor-bold', 'label' => __('Bold', 'ozh-markdown'), 'key' => 'Ctrl+B'],
 			['action' => 'italic', 'icon' => 'editor-italic', 'label' => __('Italic', 'ozh-markdown'), 'key' => 'Ctrl+I'],
+			['action' => 'strikethrough', 'icon' => 'editor-strikethrough', 'label' => __('Strikethrough', 'ozh-markdown'), 'key' => ''],
+
 			['action' => 'quote', 'icon' => 'editor-quote', 'label' => __('Quote', 'ozh-markdown'), 'key' => ''],
-			['action' => 'code', 'icon' => 'editor-code', 'label' => __('Code', 'ozh-markdown'), 'key' => ''],
-			['action' => 'link', 'icon' => 'admin-links', 'label' => __('Link', 'ozh-markdown'), 'key' => 'Ctrl+K'],
+			['action' => 'hr', 'icon' => 'minus', 'label' => __('Horizontal rule', 'ozh-markdown'), 'key' => ''],
+
 			['action' => 'ol', 'icon' => 'editor-ol', 'label' => __('Numbered list', 'ozh-markdown'), 'key' => ''],
 			['action' => 'ul', 'icon' => 'editor-ul', 'label' => __('Bulleted list', 'ozh-markdown'), 'key' => ''],
+			['action' => 'indent', 'icon' => 'controls-forward', 'label' => __('Indent list item', 'ozh-markdown'), 'key' => ''],
+			['action' => 'outdent', 'icon' => 'controls-back', 'label' => __('Outdent list item', 'ozh-markdown'), 'key' => ''],
 			['action' => 'task', 'icon' => 'yes', 'label' => __('Task list', 'ozh-markdown'), 'key' => ''],
+
+			['action' => 'code', 'icon' => 'editor-code', 'label' => __('Code', 'ozh-markdown'), 'key' => ''],
+			['action' => 'link', 'icon' => 'admin-links', 'label' => __('Link', 'ozh-markdown'), 'key' => 'Ctrl+K'],
+			['action' => 'image', 'icon' => 'format-image', 'label' => __('Image', 'ozh-markdown'), 'key' => ''],
 			['action' => 'table', 'icon' => 'grid-view', 'label' => __('Table', 'ozh-markdown'), 'key' => ''],
+
+			['action' => 'view', 'icon' => 'visibility', 'label' => __('Show source, preview or both', 'ozh-markdown'), 'key' => ''],
 		];
 	}
 
