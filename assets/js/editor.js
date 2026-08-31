@@ -83,7 +83,14 @@
 			mode: 'markdown',
 			lineNumbers: true,
 			lineWrapping: true,
-			viewportMargin: Infinity
+			viewportMargin: Infinity,
+
+			// CodeMirror otherwise types into a hidden 1px textarea and paints
+			// the text as inert divs, which no browser spellchecks. Making the
+			// visible text the input field is what gives us the red squiggles
+			// and the "Spelling" entry in the right click menu.
+			inputStyle: 'contenteditable',
+			spellcheck: true
 		});
 
 		// Published so upload.js can insert at the cursor through the same
