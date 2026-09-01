@@ -5,38 +5,79 @@
  * anywhere, so an admin colour scheme or a theme can override any of it.
  */
 
+/* The editor is as tall as it is told to be, rather than as tall as what it
+   holds: both panes then share one height by construction, and the rest of the
+   edit screen keeps a share of the window. The handle writes the property; the
+   fallback here is what a browser with nothing stored, or no JavaScript at all,
+   gets. */
 .ozhmd-editor {
 	display: flex;
-	gap: 1px;
+	height: var(--ozhmd-editor-height, 60vh);
+	min-height: 200px;
 	background: #dcdcde;
 	border: 1px solid #dcdcde;
 	border-radius: 4px;
 	overflow: hidden;
 }
 
+/* Held while the handle is being dragged: without it the pointer selects the
+   text it sweeps across on its way down the source pane. */
+.ozhmd-editor.ozhmd-resizing {
+	user-select: none;
+}
+
+/* The source pane is given the share of the row the splitter last set, and the
+   preview takes what is left. Only one of the two is driven, so the pair always
+   adds up to the row no matter what the property says. The default is even
+   panes, and it is a default rather than a stored value: the split resets on
+   every load, by design. */
 .ozhmd-pane {
-	flex: 1 1 50%;
 	min-width: 0;
 	background: #fff;
 }
 
-.ozhmd-pane-source {
+/* Both panes lay their one child out as a flex item, which is what makes that
+   child fill the pane's height without having to name it. */
+.ozhmd-pane-source,
+.ozhmd-pane-preview {
 	display: flex;
 }
 
-/* The eye button's two other states. The remaining pane is flex: 1 1 50% with
-   nothing to share the row with, so it simply takes the full width. */
+.ozhmd-pane-source {
+	flex: 0 0 var(--ozhmd-source-width, 50%);
+}
+
+.ozhmd-pane-preview {
+	flex: 1 1 auto;
+}
+
+/* The eye button's two other states: the pane that goes, and the divider that
+   has nothing left to divide. */
 .ozhmd-view-source .ozhmd-pane-preview,
-.ozhmd-view-preview .ozhmd-pane-source {
+.ozhmd-view-preview .ozhmd-pane-source,
+.ozhmd-view-source .ozhmd-split,
+.ozhmd-view-preview .ozhmd-split {
 	display: none;
 }
 
-/* No-JavaScript fallback: one full width column, no preview to show. */
-.ozhmd-editor-plain {
-	display: block;
+/* The pane that stays takes the whole row, whatever the split was: with nothing
+   left to share it with, a fixed basis would only leave the rest empty. */
+.ozhmd-view-source .ozhmd-pane-source,
+.ozhmd-view-preview .ozhmd-pane-preview {
+	flex: 1 1 auto;
 }
 
-.ozhmd-editor-plain .ozhmd-pane-preview {
+/* No-JavaScript fallback: one full width column, no preview to show, and no
+   height of ours either. The textarea is the whole editor there, it comes with
+   its own rows and its own grip, and a container it could not grow inside of
+   would only clip it. */
+.ozhmd-editor-plain {
+	display: block;
+	height: auto;
+}
+
+.ozhmd-editor-plain .ozhmd-pane-preview,
+.ozhmd-editor-plain .ozhmd-split {
 	display: none;
 }
 
@@ -57,15 +98,69 @@
 	outline-offset: -2px;
 }
 
+/* Fills the pane, and scrolls inside it. min-width and min-height are the flex
+   item's two floors lifted: without them a long line or a tall document pushes
+   the box out instead of scrolling within it. */
 .ozhmd-preview {
+	flex: 1;
+	min-width: 0;
+	min-height: 0;
 	padding: 10px 14px;
 	background: #f7f7f7;
 	overflow-wrap: break-word;
-	max-height: 80vh;
 	overflow-y: auto;
 }
 
-.ozhmd-preview > :first-child {
+/* wp-admin styles headings for its own chrome, not for documents: common.css
+   gives h2 and h3 the same 1.3em, and edit.css flattens every h2 under
+   #poststuff into a 14px metabox title with padding of its own. That leaves the
+   preview with an h2 smaller than its h3 and indented by the padding. The scale
+   below is the browser default one, restated. The #poststuff prefix is only
+   there to outspecify the admin rule it undoes. */
+#poststuff .ozhmd-preview h1,
+#poststuff .ozhmd-preview h2,
+#poststuff .ozhmd-preview h3,
+#poststuff .ozhmd-preview h4,
+#poststuff .ozhmd-preview h5,
+#poststuff .ozhmd-preview h6 {
+	padding: 0;
+	color: #1d2327;
+	font-weight: 600;
+	line-height: 1.4;
+}
+
+#poststuff .ozhmd-preview h1 {
+	font-size: 2em;
+	margin: 0.67em 0;
+}
+
+#poststuff .ozhmd-preview h2 {
+	font-size: 1.5em;
+	margin: 0.83em 0;
+}
+
+#poststuff .ozhmd-preview h3 {
+	font-size: 1.17em;
+	margin: 1em 0;
+}
+
+#poststuff .ozhmd-preview h4 {
+	font-size: 1em;
+	margin: 1.33em 0;
+}
+
+#poststuff .ozhmd-preview h5 {
+	font-size: 0.83em;
+	margin: 1.67em 0;
+}
+
+#poststuff .ozhmd-preview h6 {
+	font-size: 0.67em;
+	margin: 2.33em 0;
+}
+
+/* Prefixed too, so it still outranks the heading margins set just above. */
+#poststuff .ozhmd-preview > :first-child {
 	margin-top: 0;
 }
 
@@ -76,6 +171,17 @@
 
 .ozhmd-preview pre {
 	overflow-x: auto;
+}
+
+/* wp-admin pads and insets every <code> so it reads as an inline chip. Inside a
+   <pre> that box spans the whole block, and an inline box only gets its side
+   padding at its start and its end, so the padding lands as an indent on the
+   first line alone. Prism leaves it be: it only resets padding on code outside
+   a <pre>. The block gets its own padding from Prism, so dropping it here costs
+   nothing. Inline code keeps the admin chip. */
+.ozhmd-preview pre > code {
+	padding: 0;
+	margin: 0;
 }
 
 .ozhmd-preview blockquote {
@@ -115,28 +221,141 @@
 	margin: 0 0 12px;
 }
 
-/* CodeMirror fills its pane rather than sizing to its content. */
+/* CodeMirror fills its pane rather than sizing to its content. It measures from
+   its own box, so the height has to be on the element: vendor CSS gives it a
+   flat 300px, and .CodeMirror-scroll is already 100% of whatever it is told. */
 .ozhmd-editor .CodeMirror {
-	height: auto;
-	min-height: 400px;
-	width: 100%;
+	flex: 1;
+	min-width: 0;
+	height: 100%;
 	font-family: Consolas, Monaco, "Andale Mono", monospace;
 	font-size: 13px;
 	line-height: 1.6;
 }
 
+/* Undoes the two bounds this file used to set, from when the pane grew with its
+   content. The height above is the only one now. */
 .ozhmd-editor .CodeMirror-scroll {
-	min-height: 400px;
-	max-height: 80vh;
+	min-height: 0;
+	max-height: none;
 }
 
+/* The divider between the two panes, and the third column of the row: a line
+   in the same grey as every other border here, and nothing else. The cursor is
+   what says it can be dragged, so it draws no grip of its own. The row itself
+   sets no gap in this layout, which leaves this the only thing between the two
+   panes and its 3px the whole of what shows. */
+.ozhmd-split {
+	display: block;
+	flex: 0 0 3px;
+	background: #dcdcde;
+	cursor: ew-resize;
+
+	/* A touch that lands here is a drag, not the start of a page scroll. */
+	touch-action: none;
+}
+
+/* As for the handle below: a class rule with a display would otherwise beat
+   the browser's own [hidden]. */
+.ozhmd-split[hidden] {
+	display: none;
+}
+
+/* Only for the keyboard. A pointer says where it is by the cursor it wears,
+   and an outline left behind by a click would be a mark on a plain line. */
+.ozhmd-split:focus-visible {
+	outline: 2px solid #2271b1;
+
+	/* Inset, because the row clips what overflows it. */
+	outline-offset: -2px;
+}
+
+/* The bar that drags the editor taller or shorter. A sibling of the editor, not
+   a child: that element is the flex row holding the panes, and a full width
+   child of it would lay out as a third column. */
+.ozhmd-resize {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	height: 12px;
+	margin: 2px 0 0;
+	background: #f6f7f7;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	cursor: ns-resize;
+
+	/* A touch that lands here is a drag, not the start of a page scroll. */
+	touch-action: none;
+}
+
+/* The class rule above would otherwise beat the browser's own [hidden], and the
+   handle would show on a screen where nothing is listening to it. */
+.ozhmd-resize[hidden] {
+	display: none;
+}
+
+/* The grip: two lines, the width of a thumb. */
+.ozhmd-resize::after {
+	content: "";
+	width: 36px;
+	height: 4px;
+	border-top: 1px solid #a7aaad;
+	border-bottom: 1px solid #a7aaad;
+}
+
+.ozhmd-resize:hover,
+.ozhmd-resize:focus {
+	background: #f0f0f1;
+	border-color: #8c8f94;
+}
+
+.ozhmd-resize:focus {
+	outline: 2px solid #2271b1;
+	outline-offset: 1px;
+}
+
+/* Stacked, the panes would split one height between them, giving two cramped
+   rows out of the one the handle set. So below this width the editor goes back
+   to growing with its content, each pane bounded on its own, and there is
+   nothing left for a handle to drag. The custom property stays set on the
+   element throughout: widening the window past this point brings the chosen
+   height straight back, with no JavaScript involved.
+
+   Last in the file rather than beside the layout it undoes, because every rule
+   in it is one class deep, as are the rules it has to beat. */
 @media screen and (max-width: 850px) {
 	.ozhmd-editor {
 		flex-direction: column;
+		height: auto;
+
+		/* Stacked, there is no splitter to divide the two, so the row's own
+		   background draws the line between them. */
+		gap: 1px;
+	}
+
+	.ozhmd-editor .CodeMirror {
+		height: auto;
+	}
+
+	.ozhmd-editor .CodeMirror-scroll {
+		min-height: 400px;
+		max-height: 80vh;
 	}
 
 	.ozhmd-preview {
 		max-height: 40vh;
+	}
+
+	/* Stacked, the panes are one above the other and take the full width each,
+	   so there is no share of a row left to drag. */
+	.ozhmd-pane-source {
+		flex: 0 0 auto;
+	}
+
+	.ozhmd-resize,
+	.ozhmd-split {
+		display: none;
 	}
 }
 

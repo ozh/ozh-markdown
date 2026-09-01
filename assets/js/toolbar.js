@@ -45,6 +45,57 @@
 	}
 
 	/**
+	 * Show a toggle's other glyph, for the buttons that carry two.
+	 *
+	 * A padlock that opens says more at this size than the same padlock at a
+	 * lower opacity, which reads as disabled rather than off.
+	 *
+	 * @param {HTMLElement} button Button holding the pair.
+	 * @param {boolean} on Which of the two to show.
+	 * @return {void}
+	 */
+	function swapIcon(button, on) {
+		var names = [
+			button.getAttribute('data-ozhmd-icon-on'),
+			button.getAttribute('data-ozhmd-icon-off')
+		];
+		var glyph = button.querySelector('.dashicons');
+
+		if (!names[0] || !names[1] || !glyph) {
+			return;
+		}
+
+		glyph.classList.remove('dashicons-' + names[0], 'dashicons-' + names[1]);
+		glyph.classList.add('dashicons-' + (on ? names[0] : names[1]));
+	}
+
+	/**
+	 * Tie the panes' scrolling together, or let them move independently.
+	 *
+	 * The state is kept on the container rather than in here, because that is
+	 * where editor.js reads it. Neither file has to know about the other.
+	 *
+	 * @param {HTMLElement} button The toggle that was pressed.
+	 * @return {void}
+	 */
+	function toggleSync(button) {
+		var container = document.querySelector('[data-ozhmd-editor]');
+
+		if (!container) {
+			return;
+		}
+
+		var enabled = 'off' === container.getAttribute('data-ozhmd-sync');
+
+		container.setAttribute('data-ozhmd-sync', enabled ? 'on' : 'off');
+
+		if (button) {
+			button.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+			swapIcon(button, enabled);
+		}
+	}
+
+	/**
 	 * Read the current selection from whichever editor is active.
 	 *
 	 * @return {object|null} Editor handle, or null when there is none.
@@ -239,15 +290,22 @@
 	/**
 	 * Apply a named action to the current selection.
 	 *
-	 * The view action is the one button that leaves the text alone, so it is
+	 * View and sync are the two buttons that leave the text alone, so they are
 	 * answered here before an editor is even looked for.
 	 *
 	 * @param {string} action Action name from the toolbar.
+	 * @param {HTMLElement} [button] Button that was pressed, for the toggles.
 	 * @return {void}
 	 */
-	function apply(action) {
+	function apply(action, button) {
 		if ('view' === action) {
 			cycleView();
+
+			return;
+		}
+
+		if ('sync' === action) {
+			toggleSync(button);
 
 			return;
 		}
@@ -355,7 +413,7 @@
 			}
 
 			event.preventDefault();
-			apply(button.getAttribute('data-ozhmd-action'));
+			apply(button.getAttribute('data-ozhmd-action'), button);
 		});
 
 		interceptMediaInsert();

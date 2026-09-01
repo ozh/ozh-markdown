@@ -95,7 +95,9 @@ class Ozhmd_Editor_UI {
 
 		$this->render_toolbar();
 
-		echo '<div class="ozhmd-editor" data-ozhmd-editor>';
+		// The sync state rides on the container so the editor can read it, and
+		// so the toolbar can set it, without either knowing about the other.
+		echo '<div class="ozhmd-editor" data-ozhmd-editor data-ozhmd-sync="on">';
 
 		echo '<div class="ozhmd-pane ozhmd-pane-source">';
 		printf(
@@ -104,11 +106,55 @@ class Ozhmd_Editor_UI {
 		);
 		echo '</div>';
 
+		$this->render_splitter();
+
 		echo '<div class="ozhmd-pane ozhmd-pane-preview">';
 		echo '<div class="ozhmd-preview" data-ozhmd-preview></div>';
 		echo '</div>';
 
 		echo '</div>';
+
+		$this->render_resize_handle();
+	}
+
+	/**
+	 * Render the divider that drags the two panes wider or narrower.
+	 *
+	 * A column of the flex row, written between the two panes because that is
+	 * where the row will put it. Unlike the height, the split is not
+	 * remembered: it goes back to even panes on every load, so there is nothing
+	 * for the server to know about it.
+	 *
+	 * @return void
+	 */
+	private function render_splitter(): void {
+		printf(
+			'<div class="ozhmd-split" data-ozhmd-split role="separator" aria-orientation="vertical" tabindex="0" aria-label="%s" title="%s" hidden></div>',
+			esc_attr__('Resize the panes', 'ozh-markdown'),
+			esc_attr__('Drag, or use the arrow keys, to resize the panes', 'ozh-markdown')
+		);
+	}
+
+	/**
+	 * Render the bar that drags the editor taller or shorter.
+	 *
+	 * A sibling of the editor rather than a child of it: that element is the
+	 * flex row holding the two panes, so a full width child would lay out as a
+	 * third column beside them.
+	 *
+	 * It ships hidden and is unhidden by editor.js once the enhanced editor is
+	 * running. Without JavaScript the plain textarea is what saves, and it
+	 * carries a resize grip of its own, so a second one that did nothing would
+	 * be worse than none.
+	 *
+	 * @return void
+	 */
+	private function render_resize_handle(): void {
+		printf(
+			'<div class="ozhmd-resize" data-ozhmd-resize role="separator" aria-orientation="horizontal" tabindex="0" aria-label="%s" title="%s" hidden></div>',
+			esc_attr__('Resize the editor', 'ozh-markdown'),
+			esc_attr__('Drag, or use the arrow keys, to resize the editor', 'ozh-markdown')
+		);
 	}
 
 	/**
@@ -146,6 +192,7 @@ class Ozhmd_Editor_UI {
 			['action' => 'table', 'icon' => 'grid-view', 'label' => __('Table', 'ozh-markdown'), 'key' => ''],
 
 			['action' => 'view', 'icon' => 'visibility', 'label' => __('Show source, preview or both', 'ozh-markdown'), 'key' => ''],
+			['action' => 'sync', 'icon' => 'lock', 'icon_off' => 'unlock', 'label' => __('Scroll both panes together', 'ozh-markdown'), 'key' => '', 'toggle' => true],
 		];
 	}
 
@@ -164,11 +211,29 @@ class Ozhmd_Editor_UI {
 				? $button['label']
 				: $button['label'] . ' (' . $button['key'] . ')';
 
+			// A toggle says which way it is set, for assistive technology and
+			// for anyone reading the markup. The panes start tied together, so
+			// it starts pressed.
+			$pressed = empty($button['toggle']) ? '' : ' aria-pressed="true"';
+
+			// A toggle that swaps glyph carries both names, so the JavaScript
+			// has something to swap between without knowing which button it is
+			// looking at. The label does not change with the state: the button
+			// is still the one that ties the panes together, and aria-pressed
+			// is what says whether it currently does.
+			$icons = empty($button['icon_off']) ? '' : sprintf(
+				' data-ozhmd-icon-on="%s" data-ozhmd-icon-off="%s"',
+				esc_attr($button['icon']),
+				esc_attr($button['icon_off'])
+			);
+
 			printf(
-				'<button type="button" class="button ozhmd-tool" data-ozhmd-action="%1$s" title="%2$s" aria-label="%2$s"><span class="dashicons dashicons-%3$s" aria-hidden="true"></span></button>',
+				'<button type="button" class="button ozhmd-tool" data-ozhmd-action="%1$s" title="%2$s" aria-label="%2$s"%4$s%5$s><span class="dashicons dashicons-%3$s" aria-hidden="true"></span></button>',
 				esc_attr($button['action']),
 				esc_attr($title),
-				esc_attr($button['icon'])
+				esc_attr($button['icon']),
+				$pressed,
+				$icons
 			);
 		}
 
@@ -233,9 +298,25 @@ class Ozhmd_Editor_UI {
 		wp_enqueue_script('ozhmd-prism', OZHMD_URL . 'assets/js/vendor/prism.js', [], ozhmd_asset_version('assets/js/vendor/prism.js'), true);
 
 		wp_enqueue_script(
+			'ozhmd-scroll-lib',
+			OZHMD_URL . 'assets/js/lib/ozhmd-scroll-lib.js',
+			[],
+			ozhmd_asset_version('assets/js/lib/ozhmd-scroll-lib.js'),
+			true
+		);
+
+		wp_enqueue_script(
+			'ozhmd-resize-lib',
+			OZHMD_URL . 'assets/js/lib/ozhmd-resize-lib.js',
+			[],
+			ozhmd_asset_version('assets/js/lib/ozhmd-resize-lib.js'),
+			true
+		);
+
+		wp_enqueue_script(
 			'ozhmd-editor',
 			OZHMD_URL . 'assets/js/editor.js',
-			['ozhmd-codemirror', 'ozhmd-codemirror-markdown', 'ozhmd-marked', 'ozhmd-prism'],
+			['ozhmd-codemirror', 'ozhmd-codemirror-markdown', 'ozhmd-marked', 'ozhmd-prism', 'ozhmd-scroll-lib', 'ozhmd-resize-lib'],
 			ozhmd_asset_version('assets/js/editor.js'),
 			true
 		);
