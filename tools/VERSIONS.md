@@ -35,8 +35,8 @@ its own.
 
 `match-braces` and `line-numbers` activate from a class on the `<pre>`, not
 globally. `ozhmd_add_pre_classes()` adds them: on the front end through a
-the_content filter, and in the editor preview from editor.js. Line numbers are
-behind the Prism line numbers setting.
+the_content filter, and in the editor preview from editor.js. Both are always
+on.
 
 **Dependencies are resolved automatically, and that matters.** `prism-php`
 requires `markup-templating`. A bundle without it loads cleanly and then throws

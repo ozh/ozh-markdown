@@ -10,7 +10,7 @@
 $ozhmd_dev_autoload = __DIR__ . '/../tools/vendor/autoload.php';
 
 if (!file_exists($ozhmd_dev_autoload)) {
-	fwrite(STDERR, "Dev tooling missing. Run: ./tools/dev.sh composer install -d tests/tools\n");
+	fwrite(STDERR, "Dev tooling missing. Run: composer install -d tests/tools\n");
 	exit(1);
 }
 
