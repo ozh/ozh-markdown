@@ -3,11 +3,11 @@
         'name' => 'ozh/ozh-markdown',
         'pretty_version' => 'dev-master',
         'version' => 'dev-master',
-        'reference' => '2279c8f9f63f79250484be2b5e6a94969afcfeb5',
+        'reference' => '7726eae576e71912409338b3516f8b589b6a761a',
         'type' => 'wordpress-plugin',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
-        'dev' => false,
+        'dev' => true,
     ),
     'versions' => array(
         'dflydev/dot-access-data' => array(
@@ -20,9 +20,9 @@
             'dev_requirement' => false,
         ),
         'league/commonmark' => array(
-            'pretty_version' => '2.10.0',
-            'version' => '2.10.0.0',
-            'reference' => 'd2d1aa8b35e072966c89bc0c66cf926e56767dc4',
+            'pretty_version' => '2.10.3',
+            'version' => '2.10.3.0',
+            'reference' => '6efbd9c472b91db0a3350fcd601c8332c2382e1f',
             'type' => 'library',
             'install_path' => __DIR__ . '/../league/commonmark',
             'aliases' => array(),
@@ -58,7 +58,7 @@
         'ozh/ozh-markdown' => array(
             'pretty_version' => 'dev-master',
             'version' => 'dev-master',
-            'reference' => '2279c8f9f63f79250484be2b5e6a94969afcfeb5',
+            'reference' => '7726eae576e71912409338b3516f8b589b6a761a',
             'type' => 'wordpress-plugin',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
