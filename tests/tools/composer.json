@@ -1,7 +1,7 @@
 {
 	"name": "ozh/ozh-markdown-devtools",
 	"description": "Development-only tooling for Ozh' Markdown Plugin. Never shipped.",
-	"license": "GPL-2.0-or-later",
+	"license": "WTFPL",
 	"require": {
 		"phpunit/phpunit": "^11.5"
 	},

@@ -2,7 +2,7 @@
 	"name": "ozh/ozh-markdown",
 	"description": "Minimal split-pane Markdown editor for WordPress.",
 	"type": "wordpress-plugin",
-	"license": "GPL-2.0-or-later",
+	"license": "WTFPL",
 	"require": {
 		"php": ">=8.5",
 		"league/commonmark": "^2.10"

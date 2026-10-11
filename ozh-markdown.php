@@ -5,7 +5,8 @@
  * Description: Split-pane Markdown editor. Markdown in, plain HTML out.
  * Version:     0.1.0
  * Author:      Ozh
- * License:     GPL-2.0-or-later
+ * License:     WTFPL
+ * License URI: http://www.wtfpl.net/
  * Text Domain: ozh-markdown
  * Requires PHP: 8.5
  *

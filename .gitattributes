@@ -1,0 +1,10 @@
+# Left out of GitHub's zip and tarball downloads, so the archive holds only
+# what the plugin needs to run. Everything below stays in the repository.
+/.gitattributes         export-ignore
+/.gitignore             export-ignore
+/composer.json          export-ignore
+/composer.lock          export-ignore
+/phpunit-*.xml.dist     export-ignore
+/screenshot.png         export-ignore
+/tests/                 export-ignore
+/tools/                 export-ignore
