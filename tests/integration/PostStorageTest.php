@@ -357,4 +357,134 @@ final class PostStorageTest extends Ozhmd_Integration_Test_Case {
 		$this->assertArrayHasKey(OZHMD_POST_META_KEY, $registered);
 		$this->assertTrue($registered[OZHMD_POST_META_KEY]['show_in_rest']);
 	}
+
+	/**
+	 * Create a user with the given role and return its ID.
+	 *
+	 * @param string $role Role to give the user.
+	 * @return int New user ID.
+	 */
+	private function make_user(string $role): int {
+		return (int) wp_insert_user([
+			'user_login' => 'ozhmd_' . $role . '_' . uniqid(),
+			'user_pass'  => 'password',
+			'user_email' => uniqid() . '@example.org',
+			'role'       => $role,
+		]);
+	}
+
+	/**
+	 * Markup a contributor wrote is not published by an administrator's save.
+	 *
+	 * The stored Markdown is never filtered, only the HTML made from it. KSES
+	 * keyed on the current user alone would let any save by an administrator,
+	 * even a Quick Edit of the title, publish the contributor's raw markup.
+	 *
+	 * @return void
+	 */
+	public function test_a_contributors_markup_is_not_published_by_an_administrators_save(): void {
+		$contributor = $this->make_user('contributor');
+		wp_set_current_user($contributor);
+
+		$post_id = $this->make_post();
+		update_post_meta($post_id, OZHMD_POST_META_KEY, 'Hello <img src="x" onerror="alert(1)"><script>alert(2)</script>');
+
+		wp_set_current_user($this->make_user('administrator'));
+
+		$this->storage->convert_to_post_content($post_id, get_post($post_id));
+
+		$content = get_post($post_id)->post_content;
+
+		$this->assertStringContainsString('Hello', $content);
+		$this->assertStringNotContainsString('onerror', $content);
+		$this->assertStringNotContainsString('<script', $content);
+	}
+
+	/**
+	 * Backslashes survive the form save, into the meta and into post_content.
+	 *
+	 * WordPress slashes $_POST, and both update_post_meta() and wp_update_post()
+	 * strip slashes from what they are given, so anything unslashed once by
+	 * hand and then passed on loses its backslashes.
+	 *
+	 * @return void
+	 */
+	public function test_backslashes_survive_the_form_save(): void {
+		$this->login_as_administrator();
+
+		$markdown = "Path C:\\Users\\ozh\n\n```\nprintf(\"a\\n\");\n```";
+		$post_id  = $this->make_post();
+
+		$_POST = [
+			'ozhmd_markdown' => wp_slash($markdown),
+			'ozhmd_nonce'    => wp_create_nonce('ozhmd_save_' . $post_id),
+		];
+
+		$this->storage->store_submitted_markdown($post_id, get_post($post_id));
+		$this->storage->convert_to_post_content($post_id, get_post($post_id));
+
+		$_POST = [];
+
+		$this->assertSame($markdown, $this->storage->stored_markdown($post_id));
+		$this->assertStringContainsString('C:\\Users\\ozh', get_post($post_id)->post_content);
+		$this->assertStringContainsString('printf(&quot;a\\n&quot;);', get_post($post_id)->post_content);
+	}
+
+	/**
+	 * Backslashes survive a legacy save, and the backup taken on converting.
+	 *
+	 * @return void
+	 */
+	public function test_backslashes_survive_a_legacy_save_and_its_backup(): void {
+		$this->login_as_administrator();
+
+		$original = '<p>Path C:\\Users\\ozh</p>';
+		$post_id  = $this->make_post(wp_slash($original));
+		$edited   = '<p>Edited C:\\Users\\ozh</p>';
+
+		$this->assertSame($original, get_post($post_id)->post_content, 'The fixture itself must keep its backslashes.');
+
+		$_POST = [
+			'ozhmd_markdown' => wp_slash($edited),
+			'ozhmd_nonce'    => wp_create_nonce('ozhmd_save_' . $post_id),
+		];
+
+		$this->storage->store_submitted_markdown($post_id, get_post($post_id));
+
+		$this->assertSame($edited, get_post($post_id)->post_content);
+
+		$_POST = [
+			'ozhmd_markdown' => wp_slash('# Now markdown'),
+			'ozhmd_nonce'    => wp_create_nonce('ozhmd_save_' . $post_id),
+			'ozhmd_convert'  => '1',
+		];
+
+		$this->storage->store_submitted_markdown($post_id, get_post($post_id));
+
+		$_POST = [];
+
+		$this->assertSame($edited, get_post_meta($post_id, OZHMD_ORIGINAL_META_KEY, true));
+	}
+
+	/**
+	 * Markdown sent over REST is converted by that same request.
+	 *
+	 * The REST controller writes meta after save_post has fired, so the
+	 * conversion has to wait for wp_after_insert_post to see it.
+	 *
+	 * @return void
+	 */
+	public function test_markdown_sent_over_rest_is_converted(): void {
+		$this->login_as_administrator();
+
+		$post_id = $this->make_post();
+		$request = new WP_REST_Request('POST', '/wp/v2/posts/' . $post_id);
+		$request->set_body_params(['meta' => [OZHMD_POST_META_KEY => '# Sent over REST']]);
+
+		$response = rest_do_request($request);
+
+		$this->assertSame(200, $response->get_status());
+		$this->assertSame('# Sent over REST', $this->storage->stored_markdown($post_id));
+		$this->assertStringContainsString('<h1>Sent over REST</h1>', get_post($post_id)->post_content);
+	}
 }

@@ -38,9 +38,10 @@ class Ozhmd_Converter {
 	 * Convert post Markdown into HTML.
 	 *
 	 * Post content is authored by logged in users, so raw HTML passes through.
-	 * WordPress KSES still decides who may store it: the save path writes
-	 * through wp_update_post(), which runs content_save_pre for any user
-	 * lacking the unfiltered_html capability.
+	 * WordPress KSES still decides who may store it: the save path filters the
+	 * result unless the post author has unfiltered_html, and then writes
+	 * through wp_update_post(), which runs content_save_pre for any current
+	 * user lacking it.
 	 *
 	 * @param string $markdown Raw Markdown.
 	 * @return string Rendered HTML.

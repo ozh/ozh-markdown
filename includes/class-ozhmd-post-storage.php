@@ -6,12 +6,18 @@
 /**
  * The post save pipeline.
  *
- * Two hooks on save_post. The first stores whatever the editor submitted. The
- * second, running later so it sees meta written by either the admin form or the
- * REST controller, converts that Markdown into post_content.
+ * Two hooks. The first, on save_post, stores whatever the editor submitted.
+ * The second, on wp_after_insert_post, converts that Markdown into
+ * post_content. It cannot be a later save_post callback: the REST controller
+ * fires save_post before it writes meta, and only fires wp_after_insert_post
+ * once the meta is in.
  *
  * A post with no stored Markdown is legacy: the second hook leaves it alone
  * entirely, so an untouched archive is never rewritten.
+ *
+ * Everything written through update_post_meta() and wp_update_post() is
+ * slashed first. Both strip slashes from what they are given, so passing
+ * unslashed text loses every backslash in it.
  */
 class Ozhmd_Post_Storage {
 
@@ -55,7 +61,7 @@ class Ozhmd_Post_Storage {
 	public function register_hooks(): void {
 		add_action('init', [$this, 'register_meta']);
 		add_action('save_post', [$this, 'store_submitted_markdown'], 10, 2);
-		add_action('save_post', [$this, 'convert_to_post_content'], 20, 2);
+		add_action('wp_after_insert_post', [$this, 'convert_to_post_content'], 10, 2);
 	}
 
 	/**
@@ -87,7 +93,9 @@ class Ozhmd_Post_Storage {
 	 * @return void
 	 */
 	public function store_submitted_markdown(int $post_id, WP_Post $post): void {
-		if (!$this->should_handle($post_id, $post)) {
+		// Our own wp_update_post() call fires save_post again, with the same
+		// form still in $_POST.
+		if ($this->converting || !$this->should_handle($post_id, $post)) {
 			return;
 		}
 
@@ -115,17 +123,23 @@ class Ozhmd_Post_Storage {
 		}
 
 		if (isset($_POST['ozhmd_convert']) && !metadata_exists('post', $post_id, OZHMD_ORIGINAL_META_KEY)) {
-			update_post_meta($post_id, OZHMD_ORIGINAL_META_KEY, $post->post_content);
+			update_post_meta($post_id, OZHMD_ORIGINAL_META_KEY, wp_slash($post->post_content));
 		}
 
-		update_post_meta($post_id, OZHMD_POST_META_KEY, $markdown);
+		update_post_meta($post_id, OZHMD_POST_META_KEY, wp_slash($markdown));
 	}
 
 	/**
 	 * Convert stored Markdown into post_content.
 	 *
 	 * Runs for every save path, including REST and XML-RPC, because they all
-	 * reach save_post with the meta already written.
+	 * reach wp_after_insert_post with the meta already written.
+	 *
+	 * The stored Markdown is never filtered, only the HTML made from it, and
+	 * it is converted again on every save, by whoever saves. KSES on the save
+	 * itself only knows about the current user, so on its own it would let an
+	 * administrator's save, even a Quick Edit of the title, publish raw markup
+	 * a contributor had stored. The post author has to be trusted as well.
 	 *
 	 * @param int     $post_id Post being saved.
 	 * @param WP_Post $post    Post object.
@@ -142,7 +156,13 @@ class Ozhmd_Post_Storage {
 			return;
 		}
 
-		$this->update_content($post_id, $this->converter->to_html((string) $markdown));
+		$html = $this->converter->to_html((string) $markdown);
+
+		if (!user_can((int) $post->post_author, 'unfiltered_html')) {
+			$html = wp_kses_post($html);
+		}
+
+		$this->update_content($post_id, $html);
 	}
 
 	/**
@@ -193,10 +213,10 @@ class Ozhmd_Post_Storage {
 
 		$this->converting = true;
 
-		wp_update_post([
+		wp_update_post(wp_slash([
 			'ID'           => $post_id,
 			'post_content' => $content,
-		]);
+		]));
 
 		$this->converting = false;
 	}
