@@ -10,6 +10,7 @@ Node, and the production host never runs a build step.
 | Library | Version | Files |
 |---|---|---|
 | marked | 18.0.10 | `assets/js/vendor/marked.min.js` |
+| DOMPurify | 3.4.16 | `assets/js/vendor/purify.min.js` |
 | CodeMirror | 5.65.21 | `assets/js/vendor/codemirror.js`, `assets/js/vendor/codemirror-markdown.js`, `assets/css/vendor/codemirror.css` |
 | Prism | 1.30.0 | `assets/js/vendor/prism.js`, `assets/css/vendor/prism.css` |
 

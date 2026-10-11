@@ -126,7 +126,7 @@ final class EditorUiTest extends Ozhmd_Integration_Test_Case {
 
 		$this->editor->enqueue_assets('post-new.php');
 
-		foreach (['ozhmd-editor', 'ozhmd-toolbar', 'ozhmd-upload', 'ozhmd-codemirror', 'ozhmd-marked', 'ozhmd-prism', 'ozhmd-scroll-lib', 'ozhmd-resize-lib'] as $handle) {
+		foreach (['ozhmd-editor', 'ozhmd-toolbar', 'ozhmd-upload', 'ozhmd-codemirror', 'ozhmd-marked', 'ozhmd-dompurify', 'ozhmd-prism', 'ozhmd-scroll-lib', 'ozhmd-resize-lib'] as $handle) {
 			$this->assertTrue(wp_script_is($handle, 'enqueued'), 'not enqueued: ' . $handle);
 		}
 	}

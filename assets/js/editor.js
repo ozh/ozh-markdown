@@ -28,6 +28,40 @@
 	var RESIZE_STEP_PX = 32;
 	var SPLIT_STEP_PERCENT = 5;
 
+	// Embeds are let through so the preview shows what an author with
+	// unfiltered_html will publish. DOMPurify still vets every attribute,
+	// including the src, and srcdoc is never allowed.
+	var PURIFY_CONFIG = {
+		ADD_TAGS: ['iframe'],
+		ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling']
+	};
+
+	/**
+	 * Make rendered Markdown safe to put in the page.
+	 *
+	 * marked passes raw HTML straight through, and the Markdown shown here is
+	 * the stored source, which no one has filtered. Unsanitized, a payload a
+	 * contributor stored would run in the browser of whoever opens the post,
+	 * administrators included, before anything is saved.
+	 *
+	 * Fails closed: without a working DOMPurify the HTML is shown as text.
+	 *
+	 * @param {string} html HTML produced by marked.
+	 * @param {HTMLElement} preview Preview container.
+	 * @return {void}
+	 */
+	function setPreviewHtml(html, preview) {
+		var purify = window.DOMPurify;
+
+		if (!purify || !purify.isSupported) {
+			preview.textContent = html;
+
+			return;
+		}
+
+		preview.innerHTML = purify.sanitize(html, PURIFY_CONFIG);
+	}
+
 	/**
 	 * Render Markdown into the preview pane and highlight its code blocks.
 	 *
@@ -36,7 +70,7 @@
 	 * @return {void}
 	 */
 	function renderPreview(markdown, preview) {
-		preview.innerHTML = window.marked.parse(markdown);
+		setPreviewHtml(window.marked.parse(markdown), preview);
 
 		// Prism activates match-braces and line-numbers per block, from a class
 		// on the <pre>. The server adds the same classes on the front end.

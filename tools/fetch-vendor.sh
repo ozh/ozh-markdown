@@ -13,6 +13,7 @@ set -euo pipefail
 MARKED_VERSION=18.0.10
 CODEMIRROR_VERSION=5.65.21
 PRISM_VERSION=1.30.0
+DOMPURIFY_VERSION=3.4.16
 
 # The languages actually written about on this blog. Dependencies are resolved
 # automatically below, which matters: prism-php requires markup-templating, and
@@ -36,7 +37,8 @@ npm init -y >/dev/null 2>&1
 npm install --silent --no-audit --no-fund \
 	"marked@${MARKED_VERSION}" \
 	"codemirror@${CODEMIRROR_VERSION}" \
-	"prismjs@${PRISM_VERSION}"
+	"prismjs@${PRISM_VERSION}" \
+	"dompurify@${DOMPURIFY_VERSION}"
 
 MODULES="$WORK_DIR/node_modules"
 JS_DIR="$PLUGIN_DIR/assets/js/vendor"
@@ -44,8 +46,9 @@ CSS_DIR="$PLUGIN_DIR/assets/css/vendor"
 
 mkdir -p "$JS_DIR" "$CSS_DIR"
 
-echo "Copying marked and CodeMirror"
+echo "Copying marked, DOMPurify and CodeMirror"
 cp "$MODULES/marked/lib/marked.umd.js" "$JS_DIR/marked.min.js"
+cp "$MODULES/dompurify/dist/purify.min.js" "$JS_DIR/purify.min.js"
 cp "$MODULES/codemirror/lib/codemirror.js" "$JS_DIR/codemirror.js"
 cp "$MODULES/codemirror/lib/codemirror.css" "$CSS_DIR/codemirror.css"
 cp "$MODULES/codemirror/mode/markdown/markdown.js" "$JS_DIR/codemirror-markdown.js"

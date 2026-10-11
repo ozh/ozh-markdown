@@ -317,6 +317,7 @@ class Ozhmd_Editor_UI {
 		wp_enqueue_script('ozhmd-codemirror-markdown', OZHMD_URL . 'assets/js/vendor/codemirror-markdown.js', ['ozhmd-codemirror'], ozhmd_asset_version('assets/js/vendor/codemirror-markdown.js'), true);
 		wp_enqueue_script('ozhmd-marked', OZHMD_URL . 'assets/js/vendor/marked.min.js', [], ozhmd_asset_version('assets/js/vendor/marked.min.js'), true);
 		wp_enqueue_script('ozhmd-prism', OZHMD_URL . 'assets/js/vendor/prism.js', [], ozhmd_asset_version('assets/js/vendor/prism.js'), true);
+		wp_enqueue_script('ozhmd-dompurify', OZHMD_URL . 'assets/js/vendor/purify.min.js', [], ozhmd_asset_version('assets/js/vendor/purify.min.js'), true);
 
 		wp_enqueue_script(
 			'ozhmd-scroll-lib',
@@ -337,7 +338,7 @@ class Ozhmd_Editor_UI {
 		wp_enqueue_script(
 			'ozhmd-editor',
 			OZHMD_URL . 'assets/js/editor.js',
-			['ozhmd-codemirror', 'ozhmd-codemirror-markdown', 'ozhmd-marked', 'ozhmd-prism', 'ozhmd-scroll-lib', 'ozhmd-resize-lib'],
+			['ozhmd-codemirror', 'ozhmd-codemirror-markdown', 'ozhmd-marked', 'ozhmd-dompurify', 'ozhmd-prism', 'ozhmd-scroll-lib', 'ozhmd-resize-lib'],
 			ozhmd_asset_version('assets/js/editor.js'),
 			true
 		);

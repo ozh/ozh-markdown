@@ -39,6 +39,10 @@ function bootEditor() {
 
 	const window = {
 		marked: { parse: (text) => text },
+
+		// A pass through: without a DOM, sanitizing is checked in
+		// editor-preview.test.js, not here.
+		DOMPurify: { isSupported: true, sanitize: (html) => html },
 		CodeMirror: {
 			fromTextArea: (textarea, options) => {
 				captured.options = options;

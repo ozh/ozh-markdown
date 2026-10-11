@@ -151,6 +151,10 @@ function boot() {
 
 	const window = {
 		marked: marked,
+
+		// A pass through: without a DOM, sanitizing is checked in
+		// editor-preview.test.js, not here.
+		DOMPurify: { isSupported: true, sanitize: (html) => html },
 		ozhmdScrollLib: scrollLib,
 		CodeMirror: { fromTextArea: () => editor },
 

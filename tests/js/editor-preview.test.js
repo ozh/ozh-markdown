@@ -33,12 +33,17 @@ const MARKED = path.join(ROOT, 'assets', 'js', 'vendor', 'marked.min.js');
  * Boot editor.js over the given Markdown and report what the render produced.
  *
  * @param {string} markdown Source the fake CodeMirror instance holds.
- * @return {object} The code blocks of the rendered HTML, and the event types
- *                  dispatched on the editor container.
+ * @param {object|undefined} purify What window.DOMPurify holds. A pass through
+ *                                  by default, since there is no DOM here to
+ *                                  sanitize against.
+ * @return {object} The code blocks of the rendered HTML, the event types
+ *                  dispatched on the editor container, and what the preview
+ *                  was last given as HTML and as text.
  */
-function render(markdown) {
+function render(markdown, purify = { isSupported: true, sanitize: (html) => html }) {
 	const marked = require(MARKED);
 	const blocks = [];
+	const written = { html: null, text: null };
 
 	// Only what renderPreview() touches: assigning innerHTML fills the list
 	// that querySelectorAll() then returns, one entry per fenced block. The
@@ -47,7 +52,13 @@ function render(markdown) {
 	const preview = {
 		querySelectorAll: (selector) => ('pre > code' === selector ? blocks : []),
 
+		set textContent(text) {
+			written.text = text;
+		},
+
 		set innerHTML(html) {
+			written.html = html;
+
 			const pattern = /<pre><code[^>]*>([\s\S]*?)<\/code><\/pre>/g;
 			let match;
 
@@ -84,6 +95,7 @@ function render(markdown) {
 
 	const window = {
 		marked: marked.marked || marked,
+		DOMPurify: purify,
 		CodeMirror: {
 			fromTextArea: () => ({ getValue: () => markdown, on: () => {}, save: () => {} })
 		},
@@ -118,8 +130,37 @@ function render(markdown) {
 
 	vm.runInNewContext(fs.readFileSync(EDITOR, 'utf8'), window, { filename: EDITOR });
 
-	return { blocks, events };
+	return { blocks, events, html: written.html, text: written.text };
 }
+
+test('the preview only ever holds HTML that went through DOMPurify', () => {
+	const seen = [];
+	const purify = {
+		isSupported: true,
+		sanitize: (html, config) => {
+			seen.push({ html, config });
+
+			return '<p>clean</p>';
+		}
+	};
+
+	const { html } = render('Hi <img src="x" onerror="alert(1)">\n', purify);
+
+	assert.strictEqual(seen.length, 1, 'sanitized once per render');
+	assert.match(seen[0].html, /onerror/, 'it is handed what marked produced');
+	assert.deepStrictEqual(Array.from(seen[0].config.ADD_TAGS), ['iframe']);
+	assert.strictEqual(html, '<p>clean</p>', 'and only its output reaches the page');
+});
+
+test('without DOMPurify the preview shows the HTML as text, never as markup', () => {
+	// null rather than undefined, which would pick up the default stub.
+	for (const purify of [null, { isSupported: false, sanitize: (html) => html }]) {
+		const { html, text } = render('Hi <img src="x" onerror="alert(1)">\n', purify);
+
+		assert.strictEqual(html, null, 'innerHTML is never assigned');
+		assert.match(text, /onerror/);
+	}
+});
 
 test('the editor announces a render, which is what the stats line counts on', () => {
 	// Booting renders once. Without the announcement nothing downstream of the
