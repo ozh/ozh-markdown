@@ -1,0 +1,65 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  js:
+    name: JS
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: node --test tests/js/*.test.js
+
+  php-unit:
+    name: PHP unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
+      - run: composer install -d tests/tools --no-interaction --no-progress
+      - run: tests/tools/vendor/bin/phpunit -c phpunit-unit.xml.dist
+
+  php-integration:
+    name: PHP integration
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11
+        env:
+          MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: 1
+          MARIADB_DATABASE: ozhmd_tests
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      OZHMD_TEST_ABSPATH: ${{ github.workspace }}/wordpress/
+      OZHMD_TEST_DB_HOST: 127.0.0.1
+    steps:
+      # The plugin is checked out where WordPress expects to find it, so
+      # plugin paths and URLs resolve exactly as they do on a real site.
+      - uses: actions/checkout@v4
+        with:
+          path: wordpress/wp-content/plugins/ozh-markdown
+      - name: Download WordPress
+        run: curl -sSL https://wordpress.org/latest.tar.gz | tar -xz -C "$GITHUB_WORKSPACE"
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: mysqli
+          coverage: none
+      - working-directory: wordpress/wp-content/plugins/ozh-markdown
+        run: composer install -d tests/tools --no-interaction --no-progress
+      - working-directory: wordpress/wp-content/plugins/ozh-markdown
+        run: tests/tools/vendor/bin/phpunit -c phpunit-integration.xml.dist
