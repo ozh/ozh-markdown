@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: shivammathur/setup-php@2.37.2
+      - uses: shivammathur/setup-php@2.40.0
         with:
           php-version: '8.5'
           coverage: none
@@ -55,7 +55,7 @@ jobs:
           path: wordpress/wp-content/plugins/ozh-markdown
       - name: Download WordPress
         run: curl -sSL https://wordpress.org/latest.tar.gz | tar -xz -C "$GITHUB_WORKSPACE"
-      - uses: shivammathur/setup-php@2.37.2
+      - uses: shivammathur/setup-php@2.40.0
         with:
           php-version: '8.5'
           extensions: mysqli
