@@ -681,6 +681,13 @@
 			renderPreview(editor.getValue(), preview);
 			sync.rebuild();
 			rebuildAfterImages(preview, sync.rebuild);
+
+			// Anything that reads the rendered preview, the stats line being
+			// the one thing that does, hangs off this rather than off the
+			// editor's own changes. There is then one debounce rather than two
+			// racing, and nothing downstream can describe a preview that has
+			// not been rendered yet.
+			container.dispatchEvent(new window.CustomEvent('ozhmd:preview'));
 		}
 
 		var update = debounce(refresh, DEBOUNCE_MS);

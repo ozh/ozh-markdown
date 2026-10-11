@@ -115,6 +115,27 @@ class Ozhmd_Editor_UI {
 		echo '</div>';
 
 		$this->render_resize_handle();
+		$this->render_stats();
+	}
+
+	/**
+	 * Render the line that counts the post as it is typed.
+	 *
+	 * Empty from the server: there is nothing to count until the preview has
+	 * been rendered, and without JavaScript there is no preview at all. The
+	 * stylesheet takes an empty one out of the flow, so the no-JavaScript path
+	 * shows nothing rather than a blank strip.
+	 *
+	 * Below the resize handle rather than above it, so the grip stays touching
+	 * the panes it resizes.
+	 *
+	 * No aria-live: the numbers change on every keystroke, and a live region
+	 * would read the whole line out again each time.
+	 *
+	 * @return void
+	 */
+	private function render_stats(): void {
+		echo '<div class="ozhmd-stats" data-ozhmd-stats></div>';
 	}
 
 	/**
@@ -340,6 +361,57 @@ class Ozhmd_Editor_UI {
 			ozhmd_asset_version('assets/js/toolbar.js'),
 			true
 		);
+
+		wp_enqueue_script(
+			'ozhmd-stats-lib',
+			OZHMD_URL . 'assets/js/lib/ozhmd-stats-lib.js',
+			[],
+			ozhmd_asset_version('assets/js/lib/ozhmd-stats-lib.js'),
+			true
+		);
+
+		wp_enqueue_script(
+			'ozhmd-stats',
+			OZHMD_URL . 'assets/js/stats.js',
+			['ozhmd-stats-lib', 'ozhmd-editor'],
+			ozhmd_asset_version('assets/js/stats.js'),
+			true
+		);
+
+		// Each counted template holds one %s, taking a number the browser has
+		// already grouped for the reader. The singulars are separate strings
+		// rather than a _n() call, because the number is only known in the
+		// browser. The rate the reading time is quoted at is not here at all:
+		// it is a property of the counting, and lives in the lib beside it.
+		wp_localize_script('ozhmd-stats', 'ozhmdStats', [
+			'i18n' => [
+				/* translators: %s: number of words. */
+				'words'          => __('%s words', 'ozh-markdown'),
+				/* translators: %s: the number one. */
+				'wordsOne'       => __('%s word', 'ozh-markdown'),
+				/* translators: %s: average number of words per sentence. */
+				'perSentence'    => __('%s words per sentence', 'ozh-markdown'),
+				/* translators: %s: the number one. */
+				'perSentenceOne' => __('%s word per sentence', 'ozh-markdown'),
+				/* translators: %s: number of words in the longest sentence. Follows the average, as an aside on it. */
+				'longest'        => __('(longest: %s words)', 'ozh-markdown'),
+				/* translators: %s: the number one. */
+				'longestOne'     => __('(longest: %s word)', 'ozh-markdown'),
+				/* translators: %s: number of links in the post. */
+				'links'          => __('%s links', 'ozh-markdown'),
+				/* translators: %s: the number one. */
+				'linksOne'       => __('%s link', 'ozh-markdown'),
+				/* translators: %s: number of code blocks in the post. */
+				'codeBlocks'     => __('%s code blocks', 'ozh-markdown'),
+				/* translators: %s: the number one. */
+				'codeBlocksOne'  => __('%s code block', 'ozh-markdown'),
+				/* translators: %s: number of minutes. */
+				'minutes'        => __('%s min read', 'ozh-markdown'),
+				'minutesUnder'   => __('< 1 min read', 'ozh-markdown'),
+				/* translators: separator between the stats, with its spaces. */
+				'separator'      => __(' · ', 'ozh-markdown'),
+			],
+		]);
 
 		wp_enqueue_script(
 			'ozhmd-upload-lib',

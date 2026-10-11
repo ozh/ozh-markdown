@@ -134,7 +134,12 @@ function boot() {
 		removeAttribute: (name) => {
 			delete attributes[name];
 			notify();
-		}
+		},
+
+		// The editor announces each render here. Nothing in this file listens
+		// for it; what the announcement is for is checked in
+		// editor-preview.test.js.
+		dispatchEvent: () => true
 	};
 
 	const element = () => ({
@@ -166,6 +171,11 @@ function boot() {
 			return frames.length;
 		},
 		addEventListener: () => {},
+
+		// Enough of the constructor for editor.js to name an event with it.
+		CustomEvent: function (type) {
+			this.type = type;
+		},
 
 		// Enough of the real thing for editor.js to notice the toggles. The
 		// records are not inspected, so none are built.

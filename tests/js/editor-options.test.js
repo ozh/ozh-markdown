@@ -30,6 +30,10 @@ function bootEditor() {
 	const element = () => ({
 		classList: { add: () => {} },
 		querySelectorAll: () => [],
+
+		// The editor announces each render on its container. Nothing here
+		// listens; the announcement is checked in editor-preview.test.js.
+		dispatchEvent: () => true,
 		innerHTML: ''
 	});
 
@@ -43,7 +47,12 @@ function bootEditor() {
 			}
 		},
 		setTimeout: () => 0,
-		clearTimeout: () => {}
+		clearTimeout: () => {},
+
+		// Enough of the constructor for editor.js to name an event with it.
+		CustomEvent: function (type) {
+			this.type = type;
+		}
 	};
 
 	const document = {

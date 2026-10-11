@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Ozh' Markdown Plugin
  * Plugin URI:  https://planetozh.com/
- * Description: Minimal split-pane Markdown editor for posts and comments. Markdown in, plain HTML out.
+ * Description: Split-pane Markdown editor. Markdown in, plain HTML out.
  * Version:     0.1.0
  * Author:      Ozh
  * License:     GPL-2.0-or-later

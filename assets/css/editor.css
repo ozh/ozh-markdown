@@ -315,6 +315,24 @@
 	outline-offset: 1px;
 }
 
+/* The counts, under the grip. Quiet on purpose: they are there to be glanced at
+   while writing, not to compete with the text being written. */
+.ozhmd-stats {
+	margin: 6px 2px 0;
+	color: #646970;
+	font-size: 12px;
+	line-height: 1.5;
+}
+
+/* Nothing has been counted. With JavaScript that is true only for the instant
+   between the editor drawing and the first render, since an empty post still
+   reads "0 words"; without it there is no preview to count and the line is
+   empty for good, so it leaves the flow rather than holding open a blank strip.
+   Same treatment as the upload errors, for the same reason. */
+.ozhmd-stats:empty {
+	display: none;
+}
+
 /* Stacked, the panes would split one height between them, giving two cramped
    rows out of the one the handle set. So below this width the editor goes back
    to growing with its content, each pane bounded on its own, and there is
