@@ -1,0 +1,5 @@
+<IfModule mod_rewrite.c>
+	RewriteEngine On
+	RewriteRule ^(\.|tests(/|$)|tools(/|$)|vendor(/|$)) - [F,L]
+	RewriteRule \.(php|phar|sql|sh|lock|json|dist|md)$ - [F,L,NC]
+</IfModule>
